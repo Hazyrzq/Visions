@@ -3,563 +3,667 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useCallback, useState } from 'react';
 import {
-  ShieldCheck, Target, AlertOctagon,
-  Lightbulb, Users, BarChart2, Brain,
-  Zap, CheckCircle,
-  GraduationCap, Layers, Sparkles,
+  ShieldCheck, Target, AlertOctagon, Lightbulb, Users, BarChart2, Brain,
+  Zap, CheckCircle, GraduationCap, Layers, ArrowUpRight, Sparkles,
+  LayoutDashboard, Settings, Search, Bell, TrendingDown,
 } from 'lucide-react';
 
-/* ─── Constants ──────────────────────────────────────────────────── */
+/* ============================================================
+   STYLES — di-inject sekali via <style jsx global>-style tag
+   ============================================================ */
+const STYLES = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
+:root {
+  --bg-deep: oklch(0.13 0.02 280);
+  --bg-base: oklch(0.16 0.02 280);
+  --bg-elev: oklch(0.20 0.025 280);
+  --bg-hi:   oklch(0.24 0.028 280);
+  --line:    oklch(0.30 0.02 280 / 0.6);
+  --line-soft: oklch(0.30 0.02 280 / 0.3);
+  --violet:  oklch(0.70 0.20 305);
+  --violet-soft: oklch(0.70 0.20 305 / 0.15);
+  --coral:   oklch(0.74 0.18 25);
+  --emerald: oklch(0.78 0.15 165);
+  --amber:   oklch(0.82 0.16 80);
+  --rose:    oklch(0.70 0.20 15);
+  --text-hi: oklch(0.98 0.005 280);
+  --text-md: oklch(0.78 0.015 280);
+  --text-lo: oklch(0.58 0.02 280);
+  --font-display: 'Fraunces', ui-serif, Georgia, serif;
+  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.visions-root, .visions-root * { box-sizing: border-box; }
+.visions-root {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  background-color: var(--bg-base);
+  color: var(--text-hi);
+  font-feature-settings: "ss01","cv11";
+}
+.visions-root ::selection { background: var(--violet); color: var(--bg-deep); }
+
+.visions-root .font-display { font-family: var(--font-display); }
+.visions-root .font-mono    { font-family: var(--font-mono); }
+
+.visions-root .text-hi { color: var(--text-hi); }
+.visions-root .text-md { color: var(--text-md); }
+.visions-root .text-lo { color: var(--text-lo); }
+.visions-root .bg-deep { background-color: var(--bg-deep); }
+.visions-root .bg-base { background-color: var(--bg-base); }
+.visions-root .bg-elev { background-color: var(--bg-elev); }
+.visions-root .bg-hi   { background-color: var(--bg-hi); }
+.visions-root .border-line { border-color: var(--line); }
+
+.visions-root .display { font-family: var(--font-sans); font-weight: 500; letter-spacing: -0.04em; line-height: 1; }
+.visions-root .display em {
+  font-family: var(--font-display); font-style: italic; font-weight: 300;
+  letter-spacing: -0.03em; font-variation-settings: "opsz" 144, "SOFT" 100;
+  background: linear-gradient(135deg, var(--violet), var(--coral));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+.visions-root .eyebrow {
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em;
+  text-transform: uppercase; color: var(--text-lo);
+}
+.visions-root .num-tab { font-variant-numeric: tabular-nums; }
+
+.visions-root .glass {
+  background: linear-gradient(180deg, oklch(1 0 0 / 0.04), oklch(1 0 0 / 0.01)), var(--bg-elev);
+  border: 1px solid var(--line);
+  box-shadow:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.06),
+    0 1px 0 0 oklch(0 0 0 / 0.4),
+    0 30px 60px -20px oklch(0 0 0 / 0.5);
+  backdrop-filter: blur(20px);
+}
+
+.visions-root .pill {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.35rem 0.75rem; border-radius: 999px;
+  background: oklch(1 0 0 / 0.04); border: 1px solid var(--line);
+  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--text-md);
+}
+
+.visions-root .aurora {
+  position: absolute; inset: -20%; pointer-events: none;
+  background:
+    radial-gradient(60% 50% at 20% 20%, oklch(0.70 0.20 305 / 0.35), transparent 60%),
+    radial-gradient(50% 50% at 85% 30%, oklch(0.74 0.18 25 / 0.28), transparent 60%),
+    radial-gradient(70% 50% at 50% 90%, oklch(0.65 0.18 240 / 0.25), transparent 60%);
+  filter: blur(80px) saturate(1.2); opacity: 0.85;
+}
+
+.visions-root .grid-bg {
+  background-image:
+    linear-gradient(to right, oklch(1 0 0 / 0.04) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(1 0 0 / 0.04) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%);
+}
+
+.visions-root .btn-primary {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.4rem; border-radius: 999px;
+  font-size: 14px; font-weight: 500; color: var(--bg-deep);
+  background: linear-gradient(180deg, oklch(0.98 0.005 280), oklch(0.92 0.01 280));
+  box-shadow:
+    0 0 0 1px oklch(1 0 0 / 0.2),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.5),
+    0 8px 24px -6px oklch(0 0 0 / 0.5),
+    0 0 40px -10px var(--violet);
+  transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s ease;
+  text-decoration: none;
+}
+.visions-root .btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 0 1px oklch(1 0 0 / 0.25),
+    inset 0 1px 0 0 oklch(1 0 0 / 0.6),
+    0 12px 32px -6px oklch(0 0 0 / 0.6),
+    0 0 60px -10px var(--violet);
+}
+
+.visions-root .btn-ghost {
+  display: inline-flex; align-items: center; gap: 0.5rem;
+  padding: 0.85rem 1.4rem; border-radius: 999px;
+  font-size: 14px; font-weight: 500; color: var(--text-hi);
+  background: oklch(1 0 0 / 0.04); border: 1px solid var(--line);
+  transition: background .2s ease; text-decoration: none;
+}
+.visions-root .btn-ghost:hover { background: oklch(1 0 0 / 0.08); }
+
+.visions-root .gradient-text {
+  background: linear-gradient(135deg, var(--violet), var(--coral) 60%, oklch(0.82 0.16 80));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+
+@keyframes visions-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+.visions-root .rise { animation: visions-rise 0.9s cubic-bezier(0.16,1,0.3,1) both; }
+
+@keyframes visions-floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
+.visions-root .floaty { animation: visions-floaty 6s ease-in-out infinite; }
+`;
+
+/* ============================================================
+   DASHBOARD PREVIEW (inline)
+   ============================================================ */
+const customers = [
+  { name: 'Acme Corp',      score: 87, risk: 'Tinggi',  tone: 'rose',    init: 'AC', days: '2d' },
+  { name: 'Northwind Ltd',  score: 64, risk: 'Sedang',  tone: 'amber',   init: 'NW', days: '5d' },
+  { name: 'Globex Studio',  score: 42, risk: 'Sedang',  tone: 'amber',   init: 'GS', days: '1w' },
+  { name: 'Initech',        score: 21, risk: 'Rendah',  tone: 'emerald', init: 'IT', days: '2w' },
+  { name: 'Umbrella SaaS',  score: 92, risk: 'Tinggi',  tone: 'rose',    init: 'US', days: '1d' },
+];
+
+const toneClass = (t) => {
+  if (t === 'rose')  return { bg: 'rgba(244,63,94,0.15)',  text: 'rgb(253,164,175)', bar: 'var(--rose)' };
+  if (t === 'amber') return { bg: 'rgba(245,158,11,0.15)', text: 'rgb(252,211,77)',  bar: 'var(--amber)' };
+  return { bg: 'rgba(16,185,129,0.15)', text: 'rgb(110,231,183)', bar: 'var(--emerald)' };
+};
+
+function DashboardPreview() {
+  return (
+    <div className="glass rounded-2xl overflow-hidden w-full" style={{ background: 'var(--bg-elev)' }}>
+      <div className="flex items-center gap-2 px-4 py-3 border-b border-line">
+        <span className="w-3 h-3 rounded-full" style={{ background: '#FF5F57' }} />
+        <span className="w-3 h-3 rounded-full" style={{ background: '#FEBC2E' }} />
+        <span className="w-3 h-3 rounded-full" style={{ background: '#28C840' }} />
+        <div className="flex-1 flex justify-center">
+          <div className="px-3 py-1 rounded-md text-[11px] font-mono text-lo bg-deep border border-line flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+            visions.app/dashboard
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-12">
+        <aside className="col-span-2 border-r border-line p-3 hidden md:block">
+          <div className="flex items-center gap-2 px-2 py-2 mb-4">
+            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
+              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+            </div>
+            <span className="text-xs font-semibold">Visions</span>
+          </div>
+          {[
+            { icon: LayoutDashboard, label: 'Overview', active: true },
+            { icon: Users, label: 'Pelanggan' },
+            { icon: BarChart2, label: 'Analytics' },
+            { icon: Settings, label: 'Pengaturan' },
+          ].map(({ icon: Icon, label, active }) => (
+            <div key={label} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] mb-0.5"
+              style={{ background: active ? 'var(--violet-soft)' : 'transparent', color: active ? 'var(--text-hi)' : 'var(--text-lo)' }}>
+              <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
+              {label}
+            </div>
+          ))}
+        </aside>
+
+        <main className="col-span-12 md:col-span-10 p-5">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <div className="text-[11px] eyebrow mb-1">Customer Success</div>
+              <div className="text-[15px] font-semibold">Selamat pagi, Ari</div>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-deep border border-line text-[11px] text-lo">
+                <Search className="w-3 h-3" /> Cari pelanggan…
+              </div>
+              <div className="w-7 h-7 rounded-md bg-deep border border-line flex items-center justify-center">
+                <Bell className="w-3.5 h-3.5 text-lo" />
+              </div>
+              <div className="w-7 h-7 rounded-full" style={{ background: 'linear-gradient(135deg, var(--coral), var(--violet))' }} />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            {[
+              { label: 'Akurasi Model',   value: '94.2', suf: '%', trend: '+1.4%',       color: 'var(--violet)' },
+              { label: 'Berisiko Tinggi', value: '128',  suf: '',  trend: '+12',         color: 'var(--coral)' },
+              { label: 'Diselamatkan',    value: '47',   suf: '',  trend: 'minggu ini',  color: 'var(--emerald)' },
+            ].map((k) => (
+              <div key={k.label} className="rounded-xl p-3 bg-deep border border-line">
+                <div className="text-[10px] eyebrow mb-2">{k.label}</div>
+                <div className="flex items-baseline gap-1.5">
+                  <div className="text-2xl font-display font-medium num-tab" style={{ color: k.color }}>{k.value}</div>
+                  <div className="text-xs text-lo">{k.suf}</div>
+                </div>
+                <div className="text-[10px] text-md mt-1 flex items-center gap-1">
+                  <ArrowUpRight className="w-2.5 h-2.5" /> {k.trend}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3 mb-4">
+            <div className="col-span-2 rounded-xl p-4 bg-deep border border-line">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[11px] font-semibold">Distribusi Risiko</div>
+                <div className="text-[10px] text-lo font-mono">7 hari</div>
+              </div>
+              {[
+                { label: 'Tinggi', pct: 22, color: 'var(--rose)',    val: '128' },
+                { label: 'Sedang', pct: 41, color: 'var(--amber)',   val: '240' },
+                { label: 'Rendah', pct: 78, color: 'var(--emerald)', val: '456' },
+              ].map((b) => (
+                <div key={b.label} className="mb-2.5 last:mb-0">
+                  <div className="flex items-center justify-between text-[10px] mb-1">
+                    <span className="text-md">{b.label}</span>
+                    <span className="text-lo num-tab">{b.val}</span>
+                  </div>
+                  <div className="h-1.5 rounded-full bg-hi overflow-hidden">
+                    <div className="h-full rounded-full" style={{ width: `${b.pct}%`, background: `linear-gradient(90deg, ${b.color}, ${b.color}aa)` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="rounded-xl p-4 bg-deep border border-line relative overflow-hidden">
+              <div className="text-[11px] font-semibold mb-1">Churn Rate</div>
+              <div className="text-2xl font-display font-medium num-tab gradient-text">4.8<span className="text-sm">%</span></div>
+              <div className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
+                <TrendingDown className="w-3 h-3" /> -0.6% MoM
+              </div>
+              <svg viewBox="0 0 120 40" className="absolute bottom-2 left-2 right-2 w-[calc(100%-1rem)] h-12">
+                <defs>
+                  <linearGradient id="visions-spark" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stopColor="var(--violet)" stopOpacity="0.5" />
+                    <stop offset="100%" stopColor="var(--violet)" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                <path d="M0,28 L15,22 L30,26 L45,18 L60,20 L75,12 L90,16 L105,8 L120,10 L120,40 L0,40 Z" fill="url(#visions-spark)" />
+                <path d="M0,28 L15,22 L30,26 L45,18 L60,20 L75,12 L90,16 L105,8 L120,10" fill="none" stroke="var(--violet)" strokeWidth="1.2" />
+              </svg>
+            </div>
+          </div>
+
+          <div className="rounded-xl bg-deep border border-line overflow-hidden">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-line">
+              <div className="text-[11px] font-semibold">Pelanggan Berisiko</div>
+              <div className="text-[10px] text-lo font-mono">5 dari 824</div>
+            </div>
+            <div className="divide-y divide-[var(--line)]">
+              {customers.map((c) => {
+                const t = toneClass(c.tone);
+                return (
+                  <div key={c.name} className="grid grid-cols-12 items-center px-4 py-2.5 text-[11px]">
+                    <div className="col-span-5 flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-semibold" style={{ background: t.bg, color: t.text }}>{c.init}</div>
+                      <span className="text-md">{c.name}</span>
+                    </div>
+                    <div className="col-span-4 flex items-center gap-2">
+                      <div className="h-1 flex-1 rounded-full bg-hi overflow-hidden">
+                        <div className="h-full" style={{ width: `${c.score}%`, background: t.bar }} />
+                      </div>
+                      <span className="num-tab text-md w-6 text-right">{c.score}</span>
+                    </div>
+                    <div className="col-span-2 text-center">
+                      <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold" style={{ background: t.bg, color: t.text }}>{c.risk}</span>
+                    </div>
+                    <div className="col-span-1 text-right text-lo font-mono text-[10px]">{c.days}</div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+  );
+}
+
+/* ============================================================
+   DATA
+   ============================================================ */
 const NAV_LINKS = [
-  { href: '#tentang',   label: 'Tentang' },
-  { href: '#fitur',     label: 'Fitur' },
-  { href: '#manfaat',   label: 'Manfaat' },
+  { href: '#tentang', label: 'Tentang' },
+  { href: '#fitur',   label: 'Fitur' },
+  { href: '#manfaat', label: 'Manfaat' },
 ];
 
 const STATS = [
-  { value: '94.2%', label: 'Akurasi Model',     color: '#818CF8' },
-  { value: '0.93',  label: 'AUC-ROC Score',      color: '#A78BFA' },
-  { value: '51.2%', label: 'Churn Rate Dataset', color: '#F472B6' },
-  { value: '47+',   label: 'Fitur Prediksi',     color: '#34D399' },
+  { value: '94.2%',  label: 'Akurasi Model' },
+  { value: '0.93',   label: 'AUC-ROC Score' },
+  { value: '47+',    label: 'Fitur Prediksi' },
+  { value: '<200ms', label: 'Latency Inferensi' },
 ];
 
 const FEATURES = [
-  { icon: Target,      title: 'Churn Score 0–100',   desc: 'Setiap pelanggan mendapat skor risiko otomatis berdasarkan pola perilaku dan riwayat penggunaan platform.', accent: '#4F46E5' },
-  { icon: AlertOctagon,title: 'Risk Level Real-time', desc: 'Klasifikasi Tinggi / Sedang / Rendah diperbarui berkala untuk memudahkan prioritisasi tindakan CS.', accent: '#EF4444' },
-  { icon: Lightbulb,   title: 'Rekomendasi Retensi', desc: 'Aksi spesifik yang dipersonalisasi per pelanggan dihasilkan otomatis oleh sistem berdasarkan profil risiko.', accent: '#F59E0B' },
-  { icon: Users,       title: 'Manajemen Staff',      desc: 'Assign pelanggan berisiko ke tim Customer Success dan pantau workload serta performa setiap anggota tim.', accent: '#10B981' },
-  { icon: BarChart2,   title: 'Dashboard Analytics',  desc: 'Visualisasi tren churn rate dan distribusi risiko dengan chart interaktif yang mudah dibaca dan dipahami.', accent: '#6366F1' },
-  { icon: Brain,       title: 'Model ML Canggih',     desc: 'XGBoost, LightGBM, CatBoost + Deep Learning MLP — ensemble model untuk prediksi churn yang presisi.', accent: '#7C3AED' },
+  { icon: Target,       title: 'Churn Score 0–100',    desc: 'Setiap pelanggan mendapat skor risiko otomatis berdasarkan pola perilaku dan riwayat penggunaan platform.', color: 'var(--violet)' },
+  { icon: AlertOctagon, title: 'Risk Level Real-time', desc: 'Klasifikasi Tinggi / Sedang / Rendah diperbarui berkala untuk memudahkan prioritisasi tindakan CS.',         color: 'var(--coral)' },
+  { icon: Lightbulb,    title: 'Rekomendasi Retensi',  desc: 'Aksi spesifik yang dipersonalisasi per pelanggan dihasilkan otomatis berdasarkan profil risiko.',             color: 'var(--amber)' },
+  { icon: Users,        title: 'Manajemen Staff',      desc: 'Assign pelanggan berisiko ke tim Customer Success dan pantau workload serta performa setiap anggota.',         color: 'var(--emerald)' },
+  { icon: BarChart2,    title: 'Dashboard Analytics',  desc: 'Visualisasi tren churn rate dan distribusi risiko dengan chart interaktif yang mudah dibaca.',                 color: 'var(--violet)' },
+  { icon: Brain,        title: 'Model ML Canggih',     desc: 'XGBoost, LightGBM, CatBoost + Deep Learning MLP — ensemble model untuk prediksi yang presisi.',                color: 'var(--coral)' },
 ];
 
 const BENEFITS = [
-  {
-    icon: Target,
-    title: 'Prioritas jelas, bukan tebak-tebakan',
-    desc: 'Fokus ke pelanggan yang paling butuh perhatian hari ini—berdasarkan churn score dan sinyal risiko.',
-    accent: '#4F46E5',
-  },
-  {
-    icon: Zap,
-    title: 'Aksi retensi lebih cepat dieksekusi',
-    desc: 'Rekomendasi tindakan yang spesifik membantu tim CS bergerak cepat tanpa menyusun strategi dari nol.',
-    accent: '#7C3AED',
-  },
-  {
-    icon: BarChart2,
-    title: 'Tim & performa jadi lebih terukur',
-    desc: 'Lihat dampak intervensi, tren churn, dan workload staff dalam satu dashboard yang rapi.',
-    accent: '#10B981',
-  },
+  { icon: Target,    title: 'Prioritas jelas, bukan tebak-tebakan', desc: 'Fokus ke pelanggan yang paling butuh perhatian hari ini—berdasarkan churn score dan sinyal risiko.' },
+  { icon: Zap,       title: 'Aksi retensi lebih cepat dieksekusi',  desc: 'Rekomendasi tindakan spesifik membantu tim CS bergerak cepat tanpa menyusun strategi dari nol.' },
+  { icon: BarChart2, title: 'Tim & performa jadi lebih terukur',    desc: 'Lihat dampak intervensi, tren churn, dan workload staff dalam satu dashboard yang rapi.' },
 ];
 
-/* ─── Shared style helpers ───────────────────────────────────────── */
-const glass = {
-  background: 'rgba(255,255,255,0.86)',
-  border: '1px solid rgba(15,23,42,0.08)',
-  boxShadow: '0 10px 26px rgba(15,23,42,0.06)',
-};
-
-const sectionPill = (label) => (
-  <div className="inline-flex items-center gap-2 border rounded-full px-3.5 py-1 mb-5"
-       style={{ background: 'rgba(79,70,229,0.07)', borderColor: 'rgba(79,70,229,0.18)' }}>
-    <Sparkles className="w-3 h-3 text-indigo-400" />
-    <span className="text-xs font-semibold tracking-wide" style={{ color: '#4F46E5' }}>{label}</span>
-  </div>
-);
-
-/* ─── Page ───────────────────────────────────────────────────────── */
+/* ============================================================
+   PAGE
+   ============================================================ */
 export default function LandingPage() {
   const router = useRouter();
   const [isLeaving, setIsLeaving] = useState(false);
 
-  const navigateWithLeave = useCallback((path) => (e) => {
-    // allow open-in-new-tab etc.
-    if (
-      e?.defaultPrevented ||
-      e?.button !== 0 ||
-      e?.metaKey ||
-      e?.ctrlKey ||
-      e?.shiftKey ||
-      e?.altKey
-    ) return;
-
-    e.preventDefault();
-    if (isLeaving) return;
-
-    setIsLeaving(true);
-    document.documentElement.classList.add('page-leave');
-    window.setTimeout(() => router.push(path), 110);
-    window.setTimeout(() => {
-      document.documentElement.classList.remove('page-leave');
-    }, 300);
-  }, [router, isLeaving]);
+  const navigateWithLeave = useCallback(
+    (path) => (e) => {
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
+      if (isLeaving) return;
+      setIsLeaving(true);
+      window.setTimeout(() => router.push(path), 110);
+    },
+    [router, isLeaving]
+  );
 
   return (
-    <div
-      className="landing landing--light min-h-screen overflow-x-hidden"
-      style={{
-        background:
-          'radial-gradient(900px 520px at 50% 0%, rgba(79,70,229,0.10) 0%, rgba(79,70,229,0.02) 48%, rgba(255,255,255,0) 70%), linear-gradient(180deg, #F8FAFF 0%, #F7F8FF 55%, #FFFFFF 100%)',
-      }}
-    >
-
-      {/* Fixed dot grid */}
-      <div className="fixed inset-0 dot-pattern dot-pattern--light pointer-events-none" />
-
-      {/* ═══════════════════════════════════════════════════════════════
-          NAVBAR
-      ═══════════════════════════════════════════════════════════════ */}
-      <nav className="nav-enter fixed top-0 inset-x-0 z-50 backdrop-blur-2xl landing-nav">
-        <div className="max-w-6xl mx-auto px-6 h-16 flex items-center justify-between">
-
-          {/* Logo — hanya "Visions" */}
-          <Link href="/" className="flex items-center gap-2.5 group flex-shrink-0">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center shadow-lg transition-transform group-hover:scale-105"
-                 style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 6px 18px rgba(79,70,229,0.18)' }}>
-              <ShieldCheck className="w-4 h-4 text-white" />
-            </div>
-            <span className="font-bold text-slate-900 text-sm tracking-tight">Visions</span>
-          </Link>
-
-          {/* Nav links — tengah */}
-          <div className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map(n => (
-              <a
-                key={n.href}
-                href={n.href}
-                className="nav-link"
-              >
-                {n.label}
-              </a>
-            ))}
-          </div>
-
-          {/* CTA kanan */}
-          <Link
-            href="/login"
-            onClick={navigateWithLeave('/login')}
-            aria-disabled={isLeaving}
-            className={`btn-primary btn-primary--light btn-sm flex-shrink-0 ${isLeaving ? 'is-loading' : ''}`}
-          >
-            Login
-          </Link>
-        </div>
-      </nav>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          HERO
-      ═══════════════════════════════════════════════════════════════ */}
-      <section id="beranda" className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-16 pb-16 overflow-hidden">
-
-        {/* Glow blobs */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="glow-blob absolute top-[30%] left-1/2 -translate-x-1/2 -translate-y-1/2 w-[760px] h-[520px] rounded-full blur-[140px]"
-               style={{ background: 'radial-gradient(ellipse, rgba(79,70,229,0.18) 0%, rgba(124,58,237,0.08) 55%, transparent 100%)' }} />
-          <div className="glow-blob-2 absolute top-[55%] left-[12%] w-[320px] h-[320px] rounded-full blur-[110px]"
-               style={{ background: 'rgba(99,102,241,0.10)' }} />
-          <div className="glow-blob absolute bottom-[20%] right-[8%] w-[260px] h-[260px] rounded-full blur-[100px]"
-               style={{ background: 'rgba(124,58,237,0.08)' }} />
-        </div>
-
-        <div className="relative max-w-4xl mx-auto text-center w-full">
-
-          {/* Badge */}
-          <div className="fade-up float-badge inline-flex items-center gap-2.5 border rounded-full px-4 py-1.5 mb-8 landing-pill">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse-slow" />
-            <span className="text-xs font-semibold tracking-wider" style={{ color: '#4F46E5' }}>Platform Retensi Pelanggan SaaS</span>
-          </div>
-
-          {/* Headline */}
-          <h1 className="fade-up-1 text-5xl md:text-[64px] lg:text-[76px] font-extrabold leading-[1.05] tracking-tight mb-6">
-            <span className="text-slate-900">Cegah Churn</span>{' '}
-            <br className="hidden sm:block" />
-            <span className="gradient-text-indigo gradient-text-indigo--light">Sebelum Terjadi</span>
-          </h1>
-
-          {/* Subtitle */}
-          <p className="fade-up-2 text-base md:text-lg max-w-2xl mx-auto leading-relaxed mb-14 text-slate-600">
-            <span className="text-slate-900 font-semibold">Visions</span> membantu Anda melihat pelanggan yang mulai “menjauh”
-            lebih awal—dengan Machine Learning—supaya tim{' '}
-            <span className="text-slate-800">Customer Success</span> bisa fokus ke tindakan yang paling berdampak.
-          </p>
-
-          {/* Stats grid */}
-          <div className="fade-up-3 grid grid-cols-2 md:grid-cols-4 gap-3 max-w-3xl mx-auto">
-            {STATS.map((s) => (
-              <div key={s.label}
-                   className="stat-card stat-card--light group rounded-2xl px-5 py-5 cursor-default"
-                   style={{ '--accent': s.color }}
-              >
-                <div className="text-3xl font-extrabold tabular-nums" style={{ color: s.color }}>{s.value}</div>
-                <div className="text-xs font-medium mt-1.5 text-slate-500">{s.label}</div>
+    <>
+      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
+      <div className="visions-root min-h-screen bg-base text-hi overflow-x-hidden relative">
+        {/* NAV */}
+        <nav className="fixed top-4 inset-x-0 z-50 flex justify-center px-4">
+          <div className="glass rounded-full pl-3 pr-2 py-2 flex items-center gap-2 max-w-[920px] w-full">
+            <Link href="/" className="flex items-center gap-2 pl-2 pr-3 group">
+              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
+                <ShieldCheck className="w-3.5 h-3.5 text-white" />
               </div>
-            ))}
-          </div>
-        </div>
+              <span className="text-sm font-semibold tracking-tight">Visions</span>
+            </Link>
 
-        {/* Scroll indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-1.5 fade-up-4">
-          <span className="text-[11px] font-medium" style={{ color: 'rgba(100,116,139,0.6)' }}>scroll</span>
-          <div className="w-px h-8" style={{ background: 'linear-gradient(to bottom, rgba(79,70,229,0.35), transparent)' }} />
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          TENTANG
-      ═══════════════════════════════════════════════════════════════ */}
-      <section id="tentang" className="py-28 px-6" style={{ borderTop: '1px solid rgba(15,23,42,0.08)' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-
-            {/* Left text */}
-            <div>
-              {sectionPill('Tentang Visions')}
-              <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 leading-tight tracking-tight mb-6">
-                Solusi Cerdas untuk<br />
-                <span className="gradient-text-indigo">Retensi Pelanggan SaaS</span>
-              </h2>
-              <p className="text-base leading-relaxed mb-5 text-slate-600">
-                <strong className="text-slate-900">Visions</strong> adalah platform prediksi churn pelanggan yang dibangun
-                oleh <strong className="text-indigo-600">Tim Visions, Politeknik Negeri Jakarta</strong>, sebagai solusi
-                nyata untuk tantangan retensi di industri SaaS.
-              </p>
-              <p className="text-base leading-relaxed mb-8 text-slate-600">
-                Dengan menggabungkan kekuatan algoritma Machine Learning seperti XGBoost, LightGBM, dan Deep Learning,
-                platform ini mampu mengidentifikasi pelanggan berisiko tinggi dan memberikan rekomendasi tindakan
-                retensi yang spesifik dan terukur kepada tim Customer Success.
-              </p>
-
-              {/* Key points */}
-              <div className="space-y-3">
-                {[
-                  { icon: Brain,         text: 'Ditenagai algoritma ML & Deep Learning terkini' },
-                  { icon: Layers,        text: 'Arsitektur role-based: Admin & Staff CS' },
-                  { icon: GraduationCap, text: 'Dikembangkan oleh Tim Visions — PNJ, didukung LapisAI' },
-                ].map(({ icon: Icon, text }) => (
-                  <div key={text} className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0"
-                         style={{ background: 'rgba(79,70,229,0.10)', border: '1px solid rgba(79,70,229,0.18)' }}>
-                      <Icon className="w-4 h-4 text-indigo-600" />
-                    </div>
-                    <span className="text-sm text-slate-700">{text}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Right — info card */}
-            <div className="relative">
-              {/* Glow behind card */}
-              <div className="absolute inset-0 rounded-3xl blur-2xl"
-                   style={{ background: 'radial-gradient(ellipse, rgba(79,70,229,0.14) 0%, transparent 70%)' }} />
-
-              <div className="relative rounded-3xl p-8 space-y-5"
-                   style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.08)', boxShadow: '0 18px 50px rgba(15,23,42,0.08)' }}>
-
-                {/* Header card */}
-                <div className="flex items-center gap-4 pb-5"
-                     style={{ borderBottom: '1px solid rgba(15,23,42,0.08)' }}>
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center shadow-xl"
-                       style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 8px 24px rgba(79,70,229,0.45)' }}>
-                    <ShieldCheck className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <div className="font-bold text-slate-900 text-lg">Visions</div>
-                    <div className="text-xs mt-0.5 text-slate-500">ChurnShield Platform — v1.0</div>
-                  </div>
-                </div>
-
-                {/* Info rows */}
-                {[
-                  { label: 'Dibuat oleh',    value: 'Tim Visions — PNJ' },
-                  { label: 'Mitra',          value: 'LapisAI' },
-                  { label: 'Tech Stack',     value: 'Next.js 14 + Supabase + ML' },
-                  { label: 'Model Utama',    value: 'Random Forest (Akurasi 94.2%)' },
-                  { label: 'Dataset',        value: '47+ fitur prediksi churn' },
-                ].map(r => (
-                  <div key={r.label} className="flex items-center justify-between py-2"
-                       style={{ borderBottom: '1px solid rgba(15,23,42,0.06)' }}>
-                    <span className="text-xs font-medium text-slate-500">{r.label}</span>
-                    <span className="text-xs font-semibold text-slate-900">{r.value}</span>
-                  </div>
-                ))}
-
-                {/* Status badge */}
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse-slow" />
-                  <span className="text-xs font-semibold text-emerald-600">Platform Aktif</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          FITUR
-      ═══════════════════════════════════════════════════════════════ */}
-      <section id="fitur" className="py-28 px-6" style={{ borderTop: '1px solid rgba(15,23,42,0.08)' }}>
-        <div className="max-w-6xl mx-auto">
-
-          <div className="text-center mb-16">
-            {sectionPill('Fitur Platform')}
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-4">
-              Semua yang Dibutuhkan<br className="hidden sm:block" />{' '}
-              Tim Customer Success
-            </h2>
-            <p className="max-w-xl mx-auto text-base leading-relaxed text-slate-600">
-              Dari prediksi hingga eksekusi — satu platform terintegrasi untuk mengelola
-              retensi pelanggan SaaS secara end-to-end.
-            </p>
-          </div>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
-            {FEATURES.map((f, i) => {
-              const Icon = f.icon;
-              return (
-                <div
-                  key={f.title}
-                  className="group relative rounded-2xl p-6 transition-all duration-300 cursor-default"
-                  style={{
-                    ...glass,
-                    animation: `cardEnter 0.6s cubic-bezier(0.16,1,0.3,1) ${0.08 * i}s both`,
-                  }}
-                >
-                  {/* Hover glow border */}
-                  <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-all duration-400 pointer-events-none"
-                       style={{ border: `1px solid ${f.accent}50`, boxShadow: `0 0 28px ${f.accent}15, inset 0 0 20px ${f.accent}05` }} />
-
-                  {/* Top accent line */}
-                  <div className="absolute top-0 left-6 right-6 h-px rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                       style={{ background: `linear-gradient(90deg, transparent, ${f.accent}80, transparent)` }} />
-
-                  {/* Icon */}
-                  <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-5 transition-all duration-300 group-hover:-translate-y-1 group-hover:scale-105"
-                       style={{ background: `${f.accent}18`, border: `1px solid ${f.accent}30` }}>
-                    <Icon className="w-5 h-5 transition-colors" style={{ color: f.accent }} />
-                  </div>
-
-                  <h3 className="text-[15px] font-bold text-slate-900 mb-2 transition-colors">{f.title}</h3>
-                  <p className="text-sm leading-relaxed text-slate-600">{f.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          MANFAAT / VALUE
-      ═══════════════════════════════════════════════════════════════ */}
-      <section
-        id="manfaat"
-        className="py-28 px-6 relative overflow-hidden"
-        style={{ borderTop: '1px solid rgba(15,23,42,0.08)', background: 'rgba(79,70,229,0.02)' }}
-      >
-        {/* soft bg accents */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-          <div className="absolute -top-20 -right-24 w-[420px] h-[420px] rounded-full blur-[90px]"
-               style={{ background: 'radial-gradient(circle, rgba(79,70,229,0.14) 0%, transparent 65%)' }} />
-          <div className="absolute -bottom-28 -left-24 w-[520px] h-[520px] rounded-full blur-[110px]"
-               style={{ background: 'radial-gradient(circle, rgba(124,58,237,0.10) 0%, transparent 70%)' }} />
-        </div>
-
-        <div className="relative max-w-6xl mx-auto">
-          <div className="text-center mb-16">
-            {sectionPill('Manfaat')}
-            <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight mb-4">
-              Dibuat untuk tim CS yang kerja cepat
-            </h2>
-            <p className="max-w-2xl mx-auto text-base leading-relaxed text-slate-600">
-              Dari identifikasi risiko sampai langkah retensi—Visions bantu tim Anda mengambil keputusan yang konsisten,
-              terukur, dan mudah dipantau.
-            </p>
-          </div>
-
-          <div className="grid lg:grid-cols-3 gap-6">
-            {BENEFITS.map((b, i) => {
-              const Icon = b.icon;
-              return (
-                <div
-                  key={b.title}
-                  className="group relative rounded-3xl p-7 transition-all duration-300"
-                  style={{
-                    ...glass,
-                    animation: `cardEnter 0.65s cubic-bezier(0.16,1,0.3,1) ${0.10 * i}s both`,
-                    borderColor: 'rgba(15,23,42,0.08)',
-                  }}
-                >
-                  {/* gradient border glow on hover */}
-                  <div
-                    className="absolute inset-0 rounded-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                    style={{
-                      boxShadow: `0 18px 60px ${b.accent}22`,
-                      border: `1px solid ${b.accent}22`,
-                    }}
-                  />
-
-                  <div className="relative">
-                    <div className="flex items-start gap-4">
-                      <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:scale-[1.03]"
-                        style={{
-                          background: `linear-gradient(135deg, ${b.accent}18, ${b.accent}08)`,
-                          border: `1px solid ${b.accent}22`,
-                        }}
-                      >
-                        <Icon className="w-6 h-6" style={{ color: b.accent }} />
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="text-[16px] font-extrabold text-slate-900 leading-snug mb-2">
-                          {b.title}
-                        </h3>
-                        <p className="text-sm leading-relaxed text-slate-600">{b.desc}</p>
-                      </div>
-                    </div>
-
-                    {/* tiny proof chips */}
-                    <div className="mt-6 flex flex-wrap gap-2">
-                      {[
-                        { t: 'Lebih fokus', c: 'rgba(79,70,229,0.10)' },
-                        { t: 'Lebih cepat', c: 'rgba(124,58,237,0.10)' },
-                        { t: 'Lebih terukur', c: 'rgba(16,185,129,0.10)' },
-                      ].map((chip) => (
-                        <span
-                          key={chip.t}
-                          className="text-[11px] font-semibold px-2.5 py-1 rounded-full"
-                          style={{ background: chip.c, color: 'rgba(15,23,42,0.72)', border: '1px solid rgba(15,23,42,0.06)' }}
-                        >
-                          {chip.t}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          CTA BOTTOM
-      ═══════════════════════════════════════════════════════════════ */}
-      <section className="py-28 px-6" style={{ borderTop: '1px solid rgba(15,23,42,0.08)' }}>
-        <div className="max-w-3xl mx-auto">
-          <div className="relative rounded-3xl p-12 text-center overflow-hidden"
-               style={{
-                 background: 'linear-gradient(135deg, rgba(79,70,229,0.11) 0%, rgba(124,58,237,0.09) 55%, rgba(255,255,255,0.85) 100%)',
-                 border: '1px solid rgba(15,23,42,0.08)',
-                 boxShadow: '0 24px 70px rgba(15,23,42,0.10)',
-               }}>
-
-            {/* Top glow */}
-            <div className="absolute inset-0 rounded-3xl pointer-events-none"
-                 style={{ background: 'radial-gradient(ellipse at 50% -10%, rgba(79,70,229,0.22) 0%, transparent 65%)' }} />
-            {/* Bottom shimmer line */}
-            <div className="absolute bottom-0 left-[20%] right-[20%] h-px"
-                 style={{ background: 'linear-gradient(90deg, transparent, rgba(79,70,229,0.6), transparent)' }} />
-            {/* Side accents */}
-            <div className="absolute -left-20 top-10 w-56 h-56 rounded-full blur-[80px] pointer-events-none"
-                 style={{ background: 'rgba(79,70,229,0.14)' }} />
-            <div className="absolute -right-24 bottom-6 w-72 h-72 rounded-full blur-[90px] pointer-events-none"
-                 style={{ background: 'rgba(124,58,237,0.12)' }} />
-
-            <div className="relative">
-              <div className="w-14 h-14 rounded-2xl mx-auto mb-6 flex items-center justify-center"
-                   style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)', boxShadow: '0 10px 34px rgba(79,70,229,0.35)' }}>
-                <ShieldCheck className="w-7 h-7 text-white" />
-              </div>
-
-              <h2 className="text-3xl md:text-[40px] font-extrabold text-slate-900 mb-3 tracking-tight">Siap Memulai?</h2>
-              <p className="mb-8 max-w-md mx-auto text-base leading-relaxed text-slate-600">
-                Masuk ke dashboard dan mulai pantau pelanggan berisiko—lebih rapi, lebih cepat, dan lebih terukur.
-              </p>
-
-              {/* mini trust row */}
-              <div className="mb-10 flex flex-wrap items-center justify-center gap-2.5">
-                {[
-                  { label: 'Role-based access', tone: 'rgba(79,70,229,0.10)' },
-                  { label: 'Realtime risk level', tone: 'rgba(124,58,237,0.10)' },
-                  { label: 'Supabase Auth', tone: 'rgba(16,185,129,0.10)' },
-                ].map((b) => (
-                  <span
-                    key={b.label}
-                    className="text-[11px] font-semibold px-3 py-1.5 rounded-full"
-                    style={{ background: b.tone, color: 'rgba(15,23,42,0.75)', border: '1px solid rgba(15,23,42,0.06)' }}
-                  >
-                    {b.label}
-                  </span>
-                ))}
-              </div>
-
-              <Link
-                href="/login"
-                onClick={navigateWithLeave('/login')}
-                aria-disabled={isLeaving}
-                className={`btn-primary btn-primary--light btn-lg ${isLeaving ? 'is-loading' : ''}`}
-              >
-                Masuk ke Login
-              </Link>
-
-              <div className="mt-8 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                {['Role-based access', 'ML model siap pakai', 'Supabase Auth terintegrasi'].map(item => (
-                  <div key={item} className="flex items-center gap-2">
-                    <CheckCircle className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                    <span className="text-sm text-slate-600">{item}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ═══════════════════════════════════════════════════════════════
-          FOOTER
-      ═══════════════════════════════════════════════════════════════ */}
-      <footer className="px-6 py-10" style={{ borderTop: '1px solid rgba(15,23,42,0.08)' }}>
-        <div className="max-w-6xl mx-auto">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-
-            {/* Logo */}
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-xl flex items-center justify-center"
-                   style={{ background: 'linear-gradient(135deg, #4F46E5, #7C3AED)' }}>
-                <ShieldCheck className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <div className="text-sm font-bold text-slate-900">Visions</div>
-                <div className="text-[11px] text-slate-500">Platform prediksi churn berbasis Machine Learning</div>
-              </div>
-            </div>
-
-            {/* Nav links footer */}
-            <div className="flex items-center gap-6">
-              {NAV_LINKS.map(n => (
-                <a key={n.href} href={n.href} className="footer-link text-xs">
+            <div className="hidden md:flex items-center gap-1 mx-auto">
+              {NAV_LINKS.map((n) => (
+                <a key={n.href} href={n.href} className="px-3 py-1.5 rounded-full text-[13px] text-md hover:text-hi hover:bg-white/5 transition-colors">
                   {n.label}
                 </a>
               ))}
             </div>
 
-            {/* Right */}
-            <div className="flex flex-col items-center md:items-end gap-1.5">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg"
-                   style={{ background: 'rgba(255,255,255,0.9)', border: '1px solid rgba(15,23,42,0.08)' }}>
-                <span className="text-[11px] text-slate-500">Didukung oleh</span>
-                <span className="text-[11px] font-bold text-indigo-600">LapisAI</span>
-              </div>
-              <p className="text-[11px] text-slate-500">
-                © 2026 Visions — Tim Visions, Politeknik Negeri Jakarta
-              </p>
+            <a href="/login" onClick={navigateWithLeave('/login')}
+              className="ml-auto md:ml-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-medium bg-white hover:gap-2.5 transition-all"
+              style={{ color: 'var(--bg-deep)' }}>
+              Login <ArrowUpRight className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        </nav>
+
+        {/* HERO */}
+        <section className="relative pt-36 pb-32 px-6 overflow-hidden">
+          <div className="aurora" />
+          <div className="absolute inset-0 grid-bg pointer-events-none" />
+
+          <div className="relative max-w-[1200px] mx-auto text-center">
+            <div className="rise inline-flex items-center gap-2 pill mb-8" style={{ animationDelay: '.05s' }}>
+              <Sparkles className="w-3 h-3" style={{ color: 'var(--violet)' }} />
+              <span>Platform Retensi Pelanggan SaaS</span>
+            </div>
+
+            <h1 className="rise display text-[clamp(48px,8vw,112px)] mb-8" style={{ animationDelay: '.1s' }}>
+              Cegah <em>churn</em>
+              <br />sebelum terjadi.
+            </h1>
+
+            <p className="rise text-[17px] md:text-[19px] text-md max-w-2xl mx-auto leading-relaxed mb-10" style={{ animationDelay: '.2s' }}>
+              Visions membantu tim Customer Success melihat pelanggan yang mulai menjauh lebih awal—dengan
+              Machine Learning—supaya fokus ke tindakan yang paling berdampak.
+            </p>
+
+            <div className="rise flex flex-wrap items-center justify-center gap-3 mb-20" style={{ animationDelay: '.3s' }}>
+              <a href="/login" onClick={navigateWithLeave('/login')} className={`btn-primary ${isLeaving ? 'opacity-70' : ''}`}>
+                Masuk ke Dashboard <ArrowUpRight className="w-4 h-4" />
+              </a>
+              <a href="#fitur" className="btn-ghost">Lihat fitur</a>
+            </div>
+
+            <div className="rise relative max-w-[1100px] mx-auto" style={{ animationDelay: '.45s' }}>
+              <div className="absolute -inset-x-10 -inset-y-6 rounded-3xl pointer-events-none"
+                style={{ background: 'radial-gradient(60% 60% at 50% 0%, oklch(0.70 0.20 305 / 0.25), transparent 70%)', filter: 'blur(40px)' }} />
+              <DashboardPreview />
+              <div className="absolute inset-x-0 -bottom-1 h-32 pointer-events-none"
+                style={{ background: 'linear-gradient(to bottom, transparent, var(--bg-base))' }} />
             </div>
           </div>
-        </div>
-      </footer>
+        </section>
 
-    </div>
+        {/* STATS */}
+        <section className="px-6 -mt-8 relative z-10">
+          <div className="max-w-[1100px] mx-auto glass rounded-2xl px-6 py-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6">
+              {STATS.map((s, i) => (
+                <div key={s.label} className={`px-4 ${i < STATS.length - 1 ? 'md:border-r md:border-line' : ''}`}>
+                  <div className="text-2xl md:text-3xl font-display font-medium num-tab gradient-text">{s.value}</div>
+                  <div className="text-[11px] eyebrow mt-1">{s.label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* TENTANG */}
+        <section id="tentang" className="py-32 px-6">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              <div>
+                <div className="pill mb-6"><span style={{ color: 'var(--violet)' }}>01</span> Tentang</div>
+                <h2 className="display text-4xl md:text-6xl mb-8">
+                  Solusi cerdas untuk <em>retensi</em> pelanggan SaaS.
+                </h2>
+                <p className="text-md text-[16px] leading-relaxed mb-5">
+                  Visions adalah platform prediksi churn yang dibangun oleh Tim Visions, Politeknik Negeri Jakarta,
+                  sebagai solusi nyata untuk tantangan retensi di industri SaaS.
+                </p>
+                <p className="text-md text-[16px] leading-relaxed mb-10">
+                  Menggabungkan algoritma Machine Learning seperti XGBoost, LightGBM, dan Deep Learning, platform ini
+                  mampu mengidentifikasi pelanggan berisiko tinggi dan memberikan rekomendasi tindakan yang spesifik
+                  dan terukur.
+                </p>
+
+                <div className="space-y-3">
+                  {[
+                    { icon: Brain, text: 'Ditenagai algoritma ML & Deep Learning terkini' },
+                    { icon: Layers, text: 'Arsitektur role-based: Admin & Staff CS' },
+                    { icon: GraduationCap, text: 'Dikembangkan oleh Tim Visions — PNJ, didukung LapisAI' },
+                  ].map(({ icon: Icon, text }) => (
+                    <div key={text} className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                        style={{ background: 'var(--violet-soft)', border: '1px solid var(--line)' }}>
+                        <Icon className="w-4 h-4" style={{ color: 'var(--violet)' }} strokeWidth={1.5} />
+                      </div>
+                      <span className="text-sm text-md">{text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="relative">
+                <div className="absolute -inset-8 rounded-3xl pointer-events-none"
+                  style={{ background: 'radial-gradient(50% 60% at 50% 50%, oklch(0.70 0.20 305 / 0.25), transparent 70%)', filter: 'blur(60px)' }} />
+                <div className="relative glass rounded-2xl p-7">
+                  <div className="flex items-center justify-between mb-6 pb-5 border-b border-line">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center"
+                        style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
+                        <ShieldCheck className="w-5 h-5 text-white" />
+                      </div>
+                      <div>
+                        <div className="text-sm font-semibold">Visions</div>
+                        <div className="text-[11px] text-lo font-mono">ChurnShield · v1.0</div>
+                      </div>
+                    </div>
+                    <span className="pill text-[10px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Live
+                    </span>
+                  </div>
+
+                  {[
+                    { label: 'Dibuat oleh', value: 'Tim Visions — PNJ' },
+                    { label: 'Mitra', value: 'LapisAI' },
+                    { label: 'Tech Stack', value: 'Next · Supabase · ML' },
+                    { label: 'Model Utama', value: 'Random Forest 94.2%' },
+                    { label: 'Dataset', value: '47+ fitur prediksi' },
+                  ].map((r, i, arr) => (
+                    <div key={r.label} className={`flex items-center justify-between py-3 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
+                      <span className="text-[11px] eyebrow">{r.label}</span>
+                      <span className="text-[13px] font-medium">{r.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FITUR */}
+        <section id="fitur" className="py-32 px-6 relative">
+          <div className="absolute inset-0 grid-bg pointer-events-none opacity-40" />
+          <div className="relative max-w-[1200px] mx-auto">
+            <div className="text-center mb-16">
+              <div className="pill mb-6"><span style={{ color: 'var(--violet)' }}>02</span> Fitur</div>
+              <h2 className="display text-4xl md:text-6xl mb-6">
+                Semua yang dibutuhkan tim <em>Customer Success</em>.
+              </h2>
+              <p className="text-md max-w-xl mx-auto leading-relaxed">
+                Dari prediksi hingga eksekusi—satu platform terintegrasi untuk mengelola retensi pelanggan SaaS
+                secara end-to-end.
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {FEATURES.map((f, i) => {
+                const Icon = f.icon;
+                return (
+                  <div key={f.title}
+                    className="group relative glass rounded-2xl p-6 transition-transform duration-300 hover:-translate-y-1"
+                    style={{ animation: `visions-rise .7s cubic-bezier(.16,1,.3,1) ${0.06 * i}s both` }}>
+                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+                      style={{ boxShadow: `inset 0 0 0 1px ${f.color}, 0 0 60px -20px ${f.color}` }} />
+                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
+                      style={{ background: f.color.replace(')', ' / 0.15)'), border: `1px solid ${f.color.replace(')', ' / 0.25)')}` }}>
+                      <Icon className="w-5 h-5" style={{ color: f.color }} strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-[15px] font-semibold mb-2">{f.title}</h3>
+                    <p className="text-[13.5px] text-md leading-relaxed">{f.desc}</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* MANFAAT */}
+        <section id="manfaat" className="py-32 px-6 relative">
+          <div className="max-w-[1200px] mx-auto">
+            <div className="grid lg:grid-cols-12 gap-12 mb-16">
+              <div className="lg:col-span-5">
+                <div className="pill mb-6"><span style={{ color: 'var(--violet)' }}>03</span> Manfaat</div>
+                <h2 className="display text-4xl md:text-6xl">
+                  Dibuat untuk tim CS yang <em>kerja cepat</em>.
+                </h2>
+              </div>
+              <div className="lg:col-span-6 lg:col-start-7 flex items-end">
+                <p className="text-md text-[16px] leading-relaxed">
+                  Dari identifikasi risiko sampai langkah retensi—Visions bantu tim Anda mengambil keputusan yang
+                  konsisten, terukur, dan mudah dipantau.
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-3 gap-4">
+              {BENEFITS.map((b, i) => {
+                const Icon = b.icon;
+                return (
+                  <div key={b.title} className="glass rounded-2xl p-7 relative overflow-hidden group"
+                    style={{ animation: `visions-rise .7s cubic-bezier(.16,1,.3,1) ${0.08 * i}s both` }}>
+                    <div className="flex items-baseline justify-between mb-8">
+                      <span className="display text-5xl gradient-text num-tab">{String(i + 1).padStart(2, '0')}</span>
+                      <Icon className="w-5 h-5 text-lo" strokeWidth={1.5} />
+                    </div>
+                    <h3 className="text-[16px] font-semibold mb-3 leading-snug">{b.title}</h3>
+                    <p className="text-[13.5px] text-md leading-relaxed">{b.desc}</p>
+                    <div className="mt-6 pt-5 border-t border-line text-[11px] eyebrow flex items-center gap-2">
+                      <CheckCircle className="w-3 h-3 text-emerald-400" /> Tervalidasi
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        {/* CTA */}
+        <section className="py-32 px-6">
+          <div className="max-w-[1100px] mx-auto relative">
+            <div className="aurora" style={{ inset: '-10%', opacity: 0.6 }} />
+            <div className="relative glass rounded-3xl p-12 md:p-16 text-center overflow-hidden">
+              <div className="absolute inset-0 grid-bg pointer-events-none opacity-50" />
+              <div className="relative">
+                <div className="w-14 h-14 rounded-2xl mx-auto mb-6 flex items-center justify-center floaty"
+                  style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))', boxShadow: '0 20px 60px -10px var(--violet)' }}>
+                  <ShieldCheck className="w-7 h-7 text-white" />
+                </div>
+                <h2 className="display text-4xl md:text-6xl mb-4">
+                  Siap <em>memulai</em>?
+                </h2>
+                <p className="text-md text-[16px] max-w-md mx-auto mb-10 leading-relaxed">
+                  Masuk ke dashboard dan mulai pantau pelanggan berisiko—lebih rapi, lebih cepat, dan lebih terukur.
+                </p>
+
+                <a href="/login" onClick={navigateWithLeave('/login')} className={`btn-primary ${isLeaving ? 'opacity-70' : ''}`}>
+                  Masuk ke Login <ArrowUpRight className="w-4 h-4" />
+                </a>
+
+                <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+                  {['Role-based access', 'ML model siap pakai', 'Supabase Auth'].map((item) => (
+                    <div key={item} className="flex items-center gap-2 text-[12px] text-md">
+                      <CheckCircle className="w-3.5 h-3.5" style={{ color: 'var(--emerald)' }} strokeWidth={1.5} />
+                      {item}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="px-6 py-12 border-t border-line">
+          <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-8 items-center">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
+                <ShieldCheck className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold">Visions</div>
+                <div className="text-[11px] text-lo">Prediksi churn berbasis Machine Learning</div>
+              </div>
+            </div>
+
+            <div className="flex md:justify-center items-center gap-6">
+              {NAV_LINKS.map((n) => (
+                <a key={n.href} href={n.href} className="text-[12px] text-md hover:text-hi transition-colors">
+                  {n.label}
+                </a>
+              ))}
+            </div>
+
+            <div className="md:text-right">
+              <div className="text-[12px] text-md">
+                Didukung oleh <span className="font-semibold" style={{ color: 'var(--violet)' }}>LapisAI</span>
+              </div>
+              <div className="text-[11px] text-lo mt-1 font-mono">© 2026 — Tim Visions, PNJ</div>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </>
   );
 }
