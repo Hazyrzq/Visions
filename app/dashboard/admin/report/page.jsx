@@ -75,7 +75,7 @@ export default function AdminReportPage() {
         .vs-btn--secondary:hover { background: var(--bg-2); border-color: var(--line-2); }
       `}</style>
 
-      <div className="max-w-[1200px] mx-auto space-y-6 pb-12">
+      <div className="w-full px-8 space-y-6 pb-12">
         
         {/* ═══════════════════════ HEADER ═══════════════════════ */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">

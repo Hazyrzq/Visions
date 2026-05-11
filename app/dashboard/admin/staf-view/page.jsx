@@ -1,332 +1,388 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Users, UserCheck, AlertTriangle, X, ShieldAlert } from 'lucide-react';
-import { mockStaffPerformance, mockCustomers, mockProfiles } from '@/lib/mockData';
+import { useEffect, useState } from 'react';
+import { Sparkles, Users, Briefcase, Activity, AlertCircle, LayoutGrid, List, UserPlus } from 'lucide-react';
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
+import { supabase } from '@/lib/supabase';
+import { useConfirm } from '@/components/ui/ConfirmProvider';
 
-// Catatan: Impor komponen UI custom di bawah dinonaktifkan sementara karena 
-// UI-nya di-inline langsung agar presisi dengan design system yang baru.
-// import Button from '@/components/ui/Button';
-// import Modal from '@/components/ui/Modal';
-// import RiskBadge from '@/components/dashboard/RiskBadge';
-
-const performanceBadge = {
-  'Sangat Baik': 'bg-emerald-50 text-emerald-600 border-emerald-100',
-  'Baik':        'bg-[var(--bg-2)] text-[var(--muted)] border-[var(--line)]',
-  'Cukup':       'bg-amber-50 text-amber-600 border-amber-100',
-};
-
-export default function AdminStafViewPage() {
+export default function AdminStaffPage() {
   const { toasts, toast, remove } = useToast();
-  const [assignModal, setAssignModal]       = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [selectedStaff, setSelectedStaff]   = useState('');
-  const [assigning, setAssigning]           = useState(false);
+  const confirm = useConfirm();
+  
+  const [staffList, setStaffList] = useState([]);
+  const [customers, setCustomers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [viewMode, setViewMode] = useState('list');
 
-  const staffOnly  = mockProfiles.filter(p => p.role === 'staff' && p.is_active);
-  const unassigned = mockCustomers.filter(c => !c.assigned_to && c.risk_level === 'Tinggi');
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [manualCustomer, setManualCustomer] = useState('');
+  const [manualStaff, setManualStaff] = useState('');
+  const [isManualAssigning, setIsManualAssigning] = useState(false);
 
-  const handleAssign = async () => {
-    if (!selectedStaff) return;
-    setAssigning(true);
-    await new Promise(r => setTimeout(r, 800));
-    const staffName = mockProfiles.find(p => p.id === selectedStaff)?.full_name;
-    toast(`${selectedCustomer?.company_name ?? 'Pelanggan'} berhasil di-assign ke ${staffName}`, 'success');
-    setAssignModal(false);
-    setSelectedStaff('');
-    setAssigning(false);
+  const fetchData = async () => {
+    try {
+      const { data: staffData, error: staffError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      const { data: custData, error: custError } = await supabase
+        .from('customers')
+        .select('*');
+
+      if (staffData) setStaffList(staffData);
+      if (custData) setCustomers(custData);
+    } catch (err) {
+      console.error(err);
+      toast('Gagal mengambil data dari database', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const getStaffWorkload = (staffId) => {
+    return customers.filter(c => c.assigned_to === staffId || c.staff_id === staffId).length;
+  };
+
+  const getUnassignedCustomers = () => {
+    return customers.filter(c => !c.assigned_to && !c.staff_id);
+  };
+
+  const unassignedCount = getUnassignedCustomers().length;
+
+  const handleAutoAssign = async () => {
+    if (unassignedCount === 0) {
+      toast('Semua pelanggan sudah memiliki staf penanggung jawab.', 'success');
+      return;
+    }
+
+    if (staffList.length === 0) {
+      toast('Tidak ada data staf untuk ditugaskan.', 'error');
+      return;
+    }
+
+    const isConfirmed = await confirm({
+      title: 'Auto-Assign Pelanggan',
+      message: `Terdapat ${unassignedCount} pelanggan tanpa staf. Sistem akan membagikan mereka secara merata kepada staf dengan beban kerja terendah. Lanjutkan?`,
+      confirmText: 'Jalankan Auto-Assign',
+      cancelText: 'Batal',
+      variant: 'default'
+    });
+
+    if (!isConfirmed) return;
+
+    setIsAssigning(true);
+
+    try {
+      let unassignedCusts = getUnassignedCustomers();
+      unassignedCusts.sort((a, b) => b.churn_score - a.churn_score);
+
+      const staffWorkloads = staffList.map(s => ({
+        id: s.id,
+        count: getStaffWorkload(s.id)
+      }));
+
+      const updates = [];
+
+      unassignedCusts.forEach(cust => {
+        staffWorkloads.sort((a, b) => a.count - b.count);
+        const chosenStaff = staffWorkloads[0];
+        updates.push({ customerId: cust.id, staffId: chosenStaff.id });
+        chosenStaff.count += 1; 
+      });
+
+      for (const update of updates) {
+        await supabase
+          .from('customers')
+          .update({ assigned_to: update.staffId, staff_id: update.staffId })
+          .eq('id', update.customerId);
+      }
+
+      await fetchData();
+      toast(`Berhasil membagikan ${unassignedCount} pelanggan secara otomatis!`, 'success');
+    } catch (error) {
+      console.error(error);
+      toast('Terjadi kesalahan saat membagikan tugas', 'error');
+    } finally {
+      setIsAssigning(false);
+    }
+  };
+
+  const handleManualAssign = async (e) => {
+    e.preventDefault();
+    if (!manualCustomer || !manualStaff) return;
+
+    setIsManualAssigning(true);
+    try {
+      await supabase
+        .from('customers')
+        .update({ assigned_to: manualStaff, staff_id: manualStaff })
+        .eq('id', manualCustomer);
+
+      await fetchData();
+      toast('Pelanggan berhasil ditugaskan secara manual!', 'success');
+      setIsManualModalOpen(false);
+      setManualCustomer('');
+      setManualStaff('');
+    } catch (error) {
+      console.error(error);
+      toast('Gagal menugaskan pelanggan', 'error');
+    } finally {
+      setIsManualAssigning(false);
+    }
   };
 
   return (
     <div className="vs-root">
-      {/* ─── CSS Global (Design System Visions) ─── */}
       <style jsx global>{`
         .vs-root {
           --bg:        #FAFAFA;
           --bg-2:      #F4F4F5;
           --surface:   #FFFFFF;
           --ink:       #0A0A0A;
-          --ink-2:     #18181B;
           --muted:     #52525B;
           --muted-2:   #71717A;
           --muted-3:   #A1A1AA;
           --line:      #E4E4E7;
           --line-2:    #EAEAEC;
           --line-soft: #F0F0F2;
-
           --brand:     #4F46E5;
-          --success:   #10B981;
-          --warn:      #F59E0B;
-          --danger:    #EF4444;
-
-          --shadow-xs: 0 1px 2px rgba(16,24,40,0.04);
-          --shadow-xl: 0 20px 40px -8px rgba(0,0,0,0.15);
-          
           font-family: 'Geist', 'Inter', -apple-system, sans-serif;
-          color: var(--ink);
         }
-        .vs-root .mono { font-family: 'Geist Mono', monospace; }
-        .vs-card {
-          background: var(--surface);
-          border: 1px solid var(--line);
-          border-radius: 12px;
-          box-shadow: var(--shadow-xs);
-        }
-        .vs-tag {
-          display: inline-flex; align-items: center; justify-content: center; gap: 4px;
-          padding: 4px 10px; border-radius: 6px;
-          font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
-          border: 1px solid transparent;
-        }
-        
-        /* Buttons */
-        .vs-btn {
-          display:inline-flex; align-items:center; justify-content:center; gap:6px;
-          font-size: 13px; font-weight: 500;
-          padding: 6px 12px; border-radius: 8px;
-          transition: all .2s ease; cursor: pointer;
-        }
-        .vs-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-        .vs-btn--primary {
-          color: #fff; background: var(--ink); border: 1px solid var(--ink);
-        }
-        .vs-btn--primary:hover:not(:disabled) { background: var(--ink-2); transform: translateY(-0.5px); }
-        .vs-btn--ghost {
-          color: var(--ink); background: var(--surface); border: 1px solid var(--line);
-        }
-        .vs-btn--ghost:hover:not(:disabled) { background: var(--bg-2); border-color: var(--line-2); }
-        .vs-btn--danger {
-          color: #fff; background: var(--danger); border: 1px solid var(--danger);
-        }
-        .vs-btn--danger:hover:not(:disabled) { filter: brightness(0.9); transform: translateY(-0.5px); }
-
-        /* Form Controls */
-        .vs-select {
-          width: 100%; background: var(--surface); border: 1px solid var(--line);
-          border-radius: 8px; font-size: 13px; color: var(--ink); padding: 8px 12px;
-          outline: none; transition: all 0.2s ease; appearance: none;
-        }
-        .vs-select:focus { border-color: var(--muted-3); box-shadow: 0 0 0 1px var(--muted-3); }
-
-        @keyframes vsReveal { from { opacity:0; transform: scale(0.96) translateY(8px); } to { opacity:1; transform: none; } }
       `}</style>
 
-      <div className="max-w-[1200px] mx-auto space-y-6 pb-12">
-        
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
+      <div className="w-full px-8 space-y-6 pb-12">
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
           <div>
             <div className="flex items-center gap-3 mb-1">
               <div className="w-8 h-8 rounded-lg bg-[var(--bg-2)] border border-[var(--line)] flex items-center justify-center">
-                <Users className="w-4 h-4 text-[var(--ink)]" />
+                <Briefcase className="w-4 h-4 text-[var(--ink)]" />
               </div>
-              <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-[var(--ink)]">Staff View</h1>
+              <h1 className="text-[24px] font-semibold tracking-[-0.02em] text-[var(--ink)]">Distribusi Tugas Staf</h1>
             </div>
-            <p className="text-[14px] text-[var(--muted)] ml-11">Pantau beban kerja tim dan distribusikan penanganan pelanggan berisiko.</p>
+            <p className="text-[14px] text-[var(--muted)] ml-11">Pantau beban kerja staf dan bagikan pelanggan berisiko dengan AI.</p>
+          </div>
+          
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-lg">
+              <AlertCircle className="w-4 h-4 text-amber-600"/>
+              <span className="text-[12px] font-semibold text-amber-700">{unassignedCount} Pelanggan Menganggur</span>
+            </div>
+
+            <div className="flex items-center p-1 bg-[var(--bg-2)] rounded-lg border border-[var(--line)] ml-2 mr-2">
+              <button 
+                onClick={() => setViewMode('grid')} 
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-[var(--ink)]' : 'text-[var(--muted-3)] hover:text-[var(--muted)]'}`}
+                title="Tampilan Grid"
+              >
+                <LayoutGrid className="w-4 h-4"/>
+              </button>
+              <button 
+                onClick={() => setViewMode('list')} 
+                className={`p-1.5 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-[var(--ink)]' : 'text-[var(--muted-3)] hover:text-[var(--muted)]'}`}
+                title="Tampilan List"
+              >
+                <List className="w-4 h-4"/>
+              </button>
+            </div>
+            
+            <div className="flex gap-2">
+              <Button 
+                variant="outline"
+                onClick={() => setIsManualModalOpen(true)}
+                disabled={loading || unassignedCount === 0}
+                className="gap-2 bg-white hover:bg-gray-50 border-gray-200 text-gray-700 shadow-sm"
+              >
+                <UserPlus className="w-4 h-4" />
+                Assign Manual
+              </Button>
+              <Button 
+                onClick={handleAutoAssign}
+                disabled={isAssigning || loading || unassignedCount === 0}
+                className="gap-2 bg-indigo-600 hover:bg-indigo-700 text-white shadow-md transition-all active:scale-95 border-none"
+              >
+                {isAssigning ? (
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {isAssigning ? 'Menyimpan...' : 'Auto-Assign'}
+              </Button>
+            </div>
           </div>
         </div>
 
-        <div className="grid xl:grid-cols-3 gap-5">
-          
-          {/* ═══════════════════════ STAFF TABLE (2/3) ═══════════════════════ */}
-          <div className="xl:col-span-2 vs-card overflow-hidden flex flex-col">
-            <div className="px-5 py-4 border-b border-[var(--line)] bg-[var(--surface)] flex items-center justify-between">
-              <h3 className="text-[14px] font-semibold text-[var(--ink)]">Tim Customer Success</h3>
-              <span className="text-[12px] font-medium text-[var(--muted-2)]">{staffOnly.length} Anggota Aktif</span>
-            </div>
-            
-            <div className="overflow-x-auto">
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <div className="w-8 h-8 border-4 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        ) : staffList.length === 0 ? (
+          <div className="text-center py-20 border border-dashed border-gray-300 rounded-2xl bg-[var(--bg)]">
+            <Users className="w-8 h-8 text-[var(--muted-3)] mx-auto mb-3" />
+            <h3 className="text-sm font-semibold text-[var(--ink)]">Belum ada data staf</h3>
+            <p className="text-xs text-[var(--muted)] mt-1">Tambahkan staf di database Supabase untuk mulai mendistribusikan tugas.</p>
+          </div>
+        ) : viewMode === 'grid' ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            {staffList.map((staff) => {
+              const workload = getStaffWorkload(staff.id);
+              const isOverloaded = workload > 5;
+              
+              return (
+                <Card key={staff.id} className="p-6 border-[var(--line)] shadow-sm hover:shadow-md transition-all relative overflow-hidden group bg-[var(--surface)]">
+                  <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                    <Users className="w-24 h-24" />
+                  </div>
+                  
+                  <div className="relative z-10">
+                    <div className="w-12 h-12 rounded-full bg-[var(--bg-2)] border border-[var(--line)] flex items-center justify-center text-[var(--muted)] font-bold text-lg mb-4 shadow-sm uppercase">
+                      {staff.full_name ? staff.full_name.substring(0, 2) : 'ST'}
+                    </div>
+                    
+                    <h3 className="text-[15px] font-bold text-[var(--ink)] leading-tight mb-1 capitalize">{staff.full_name || 'Staff Tanpa Nama'}</h3>
+                    <p className="text-[12px] font-medium text-[var(--muted)] mb-6 capitalize">{staff.role || 'Staff Tim Visions'}</p>
+                    
+                    <div className="pt-4 border-t border-[var(--line-soft)] flex items-end justify-between">
+                      <div>
+                        <p className="text-[11px] font-bold text-[var(--muted-3)] uppercase tracking-wider mb-1">Beban Kerja</p>
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl font-black text-[var(--ink)]">{workload}</span>
+                          <span className="text-[12px] text-[var(--muted)]">Pelanggan</span>
+                        </div>
+                      </div>
+                      
+                      <div className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider flex items-center gap-1 border ${
+                        isOverloaded ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                      }`}>
+                        <Activity className="w-3 h-3" />
+                        {isOverloaded ? 'Tinggi' : 'Normal'}
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <Card className="p-0 border border-gray-200 shadow-sm overflow-hidden bg-white w-full rounded-xl">
+            <div className="w-full overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="bg-[var(--bg-2)] border-b border-[var(--line)]">
-                    {['Nama Staff', 'Beban Kerja', 'Selesai / Bln', 'Performa', 'Aksi'].map(h => (
-                      <th key={h} className="px-5 py-3.5 text-[11px] font-semibold text-[var(--muted)] uppercase tracking-wider whitespace-nowrap">
-                        {h}
-                      </th>
-                    ))}
+                  <tr className="bg-gray-50 border-b border-gray-200">
+                    <th className="px-6 py-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[35%]">Nama Staf</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider w-[25%]">Peran (Role)</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-center w-[20%]">Beban Kerja</th>
+                    <th className="px-6 py-4 text-[11px] font-semibold text-gray-500 uppercase tracking-wider text-right w-[20%]">Status Kapasitas</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[var(--line-soft)] bg-[var(--surface)]">
-                  {mockStaffPerformance.map(s => (
-                    <tr key={s.id} className="hover:bg-[var(--bg)] transition-colors group">
-                      
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-[var(--bg-2)] border border-[var(--line)] flex items-center justify-center text-[11px] font-semibold text-[var(--muted)] uppercase">
-                            {s.name.split(' ').map(n => n[0]).join('').slice(0, 2)}
+                <tbody className="divide-y divide-gray-100">
+                  {staffList.map((staff) => {
+                    const workload = getStaffWorkload(staff.id);
+                    const isOverloaded = workload > 5;
+                    
+                    return (
+                      <tr key={staff.id} className="hover:bg-gray-50/50 transition-colors group">
+                        <td className="px-6 py-4 truncate">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 shrink-0 rounded-full bg-gray-100 border border-gray-200 flex items-center justify-center text-[12px] font-bold text-gray-500 uppercase shadow-sm">
+                              {staff.full_name ? staff.full_name.substring(0, 2) : 'ST'}
+                            </div>
+                            <div className="text-[13px] font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors capitalize truncate">
+                              {staff.full_name || 'Staff Tanpa Nama'}
+                            </div>
                           </div>
-                          <div>
-                            <div className="text-[13px] font-medium text-[var(--ink)]">{s.name}</div>
-                            <div className="text-[11px] text-[var(--muted-3)] mono mt-0.5">{s.assigned} assigned</div>
+                        </td>
+                        <td className="px-6 py-4 text-[13px] text-gray-500 capitalize truncate">
+                          {staff.role || 'Staff Tim Visions'}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <span className="text-[14px] font-bold text-gray-900">{workload}</span>
+                            <span className="text-[12px] text-gray-400">Pelanggan</span>
                           </div>
-                        </div>
-                      </td>
-                      
-                      <td className="px-5 py-3.5 min-w-[140px]">
-                        <div className="flex items-center gap-3">
-                          <div className="flex-1 h-1.5 rounded-full bg-[var(--line-soft)] overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-500"
-                              style={{ 
-                                width: `${s.workload_pct}%`,
-                                backgroundColor: s.workload_pct > 80 ? 'var(--danger)' : s.workload_pct > 60 ? 'var(--warn)' : 'var(--success)'
-                              }}
-                            />
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className={`inline-flex px-3 py-1.5 rounded-md text-[10px] font-bold uppercase tracking-wider items-center gap-1.5 border ${
+                            isOverloaded ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                          }`}>
+                            <Activity className="w-3.5 h-3.5 shrink-0" />
+                            {isOverloaded ? 'Kapasitas Tinggi' : 'Kapasitas Normal'}
                           </div>
-                          <span className="text-[12px] font-semibold tabular-nums w-8 text-right" style={{
-                            color: s.workload_pct > 80 ? 'var(--danger)' : s.workload_pct > 60 ? 'var(--warn)' : 'var(--muted)'
-                          }}>
-                            {s.workload_pct}%
-                          </span>
-                        </div>
-                      </td>
-                      
-                      <td className="px-5 py-3.5 text-[13px] font-semibold tabular-nums text-[var(--ink)]">
-                        {s.resolved_month}
-                      </td>
-                      
-                      <td className="px-5 py-3.5">
-                        <span className={`vs-tag ${performanceBadge[s.performance]}`}>
-                          {s.performance}
-                        </span>
-                      </td>
-                      
-                      <td className="px-5 py-3.5">
-                        <button 
-                          className="vs-btn vs-btn--ghost"
-                          onClick={() => { setSelectedCustomer(null); setSelectedStaff(s.id); setAssignModal(true); }}
-                        >
-                          Assign
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
-          </div>
-
-          {/* ═══════════════════════ UNASSIGNED PANEL (1/3) ═══════════════════════ */}
-          <div className="vs-card flex flex-col h-fit">
-            <div className="px-5 py-4 border-b border-[var(--line)] bg-[var(--surface)] flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ShieldAlert className="w-4 h-4 text-[var(--danger)]" />
-                <h3 className="text-[14px] font-semibold text-[var(--ink)]">Belum Di-assign</h3>
-              </div>
-              <span className="flex items-center justify-center min-w-[20px] h-5 px-1.5 bg-red-50 text-red-600 border border-red-100 rounded-md text-[11px] font-bold tabular-nums">
-                {unassigned.length}
-              </span>
-            </div>
-            
-            <div className="p-4 space-y-3 bg-[var(--bg)] min-h-[300px]">
-              {unassigned.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center">
-                  <div className="w-10 h-10 rounded-full bg-[var(--line-soft)] flex items-center justify-center mb-3">
-                    <UserCheck className="w-5 h-5 text-[var(--muted-3)]" />
-                  </div>
-                  <div className="text-[13px] font-medium text-[var(--muted)]">Semua pelanggan tertangani</div>
-                  <div className="text-[11px] text-[var(--muted-3)] mt-1">Tidak ada pelanggan berisiko yang mengantre.</div>
-                </div>
-              ) : (
-                unassigned.map(c => (
-                  <div key={c.id} className="bg-[var(--surface)] border border-[var(--line-soft)] rounded-xl p-4 hover:border-[var(--line)] transition-colors">
-                    <div className="flex items-start justify-between gap-2 mb-3">
-                      <div>
-                        <div className="text-[13px] font-semibold text-[var(--ink)]">{c.company_name}</div>
-                        <div className="text-[11px] text-[var(--muted-3)] mono mt-0.5">{c.customer_id} · {c.plan_type}</div>
-                      </div>
-                      <span className="vs-tag bg-red-50 text-red-600 border-red-100">Tinggi</span>
-                    </div>
-                    
-                    <div className="flex items-center justify-between mb-4">
-                      <span className="text-[11px] font-medium text-[var(--muted)]">Churn Score</span>
-                      <span className="text-[13px] font-bold text-[var(--danger)] tabular-nums">{c.churn_score}</span>
-                    </div>
-                    
-                    <button 
-                      className="vs-btn vs-btn--danger w-full py-[7px]"
-                      onClick={() => { setSelectedCustomer(c); setSelectedStaff(''); setAssignModal(true); }}
-                    >
-                      Assign Sekarang
-                    </button>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-        </div>
+          </Card>
+        )}
       </div>
 
-      {/* ═══════════════════════ MODAL (INLINED) ═══════════════════════ */}
-      {assignModal && (
-        <div className="fixed inset-0 z-[99] flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[var(--ink)]/40 backdrop-blur-sm" onClick={() => setAssignModal(false)} />
-          
-          <div className="vs-card relative w-full max-w-[400px] shadow-[var(--shadow-xl)] flex flex-col overflow-hidden" style={{ animation: 'vsReveal 0.2s cubic-bezier(0.16, 1, 0.3, 1)' }}>
-            
-            <div className="px-5 py-4 border-b border-[var(--line)] flex items-center justify-between bg-[var(--surface)]">
-              <h3 className="text-[15px] font-semibold text-[var(--ink)]">Assign Pelanggan ke Staff</h3>
-              <button onClick={() => setAssignModal(false)} className="text-[var(--muted-3)] hover:text-[var(--ink)] transition-colors">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="p-5 space-y-5 bg-[var(--surface)]">
-              {/* Info Pelanggan */}
-              {selectedCustomer && (
-                <div className="bg-[var(--bg-2)] border border-[var(--line-soft)] rounded-xl p-3.5">
-                  <div className="text-[11px] font-medium text-[var(--muted-2)] uppercase tracking-wider mb-1">Target Pelanggan</div>
-                  <div className="text-[13px] font-semibold text-[var(--ink)]">{selectedCustomer.company_name}</div>
-                  <div className="text-[12px] text-[var(--muted)] mt-0.5 mono">{selectedCustomer.customer_id} · Score: <span className="text-[var(--danger)] font-bold">{selectedCustomer.churn_score}</span></div>
-                </div>
-              )}
-
-              {/* Dropdown Staff */}
-              <div>
-                <label className="block text-[12px] font-semibold text-[var(--ink)] mb-2">Pilih Staff Penanggung Jawab</label>
-                <div className="relative">
-                  <select 
-                    value={selectedStaff} 
-                    onChange={e => setSelectedStaff(e.target.value)} 
-                    className="vs-select"
-                  >
-                    <option value="" disabled>— Pilih anggota tim —</option>
-                    {staffOnly.map(s => (
-                      <option key={s.id} value={s.id}>{s.full_name}</option>
-                    ))}
-                  </select>
-                  {/* Custom Arrow for Select */}
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[var(--muted-3)]">
-                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M1 1L5 5L9 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="px-5 py-4 border-t border-[var(--line)] bg-[var(--bg-2)] flex gap-3">
-              <button className="vs-btn vs-btn--ghost flex-1 py-2" onClick={() => setAssignModal(false)}>
-                Batal
-              </button>
-              <button 
-                className="vs-btn vs-btn--primary flex-1 py-2" 
-                disabled={!selectedStaff || assigning} 
-                onClick={handleAssign}
-              >
-                {assigning ? (
-                  <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
-                ) : 'Konfirmasi'}
-              </button>
-            </div>
+      <Dialog open={isManualModalOpen} onOpenChange={setIsManualModalOpen}>
+        <DialogContent className="sm:max-w-[425px] bg-white rounded-xl border border-gray-200 shadow-2xl p-0 overflow-hidden">
+          <div className="p-6 pb-4 border-b border-gray-100">
+            <DialogTitle className="text-[18px] font-bold text-gray-900 tracking-tight">Assign Manual</DialogTitle>
+            <DialogDescription className="text-[13px] text-gray-500 mt-1.5">
+              Pilih satu pelanggan yang menganggur dan tugaskan secara spesifik kepada staf pilihan Anda.
+            </DialogDescription>
           </div>
-        </div>
-      )}
+          
+          <form onSubmit={handleManualAssign} className="p-6 space-y-5">
+            <div className="space-y-2">
+              <label className="text-[12px] font-semibold text-gray-500 uppercase tracking-wider">Pilih Pelanggan</label>
+              <select
+                required
+                value={manualCustomer}
+                onChange={(e) => setManualCustomer(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+              >
+                <option value="">-- Klik untuk memilih pelanggan --</option>
+                {getUnassignedCustomers().map(c => (
+                  <option key={c.id} value={c.id}>
+                    {c.company_name} (Skor Churn: {c.churn_score})
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <div className="space-y-2">
+              <label className="text-[12px] font-semibold text-gray-500 uppercase tracking-wider">Pilih Staf</label>
+              <select
+                required
+                value={manualStaff}
+                onChange={(e) => setManualStaff(e.target.value)}
+                className="w-full bg-gray-50 border border-gray-200 rounded-lg p-3 text-[13px] text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all"
+              >
+                <option value="">-- Klik untuk memilih staf --</option>
+                {staffList.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.full_name} ({getStaffWorkload(s.id)} Pelanggan)
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="ghost" onClick={() => setIsManualModalOpen(false)} className="text-gray-600 hover:bg-gray-100">
+                Batal
+              </Button>
+              <Button type="submit" disabled={isManualAssigning || !manualCustomer || !manualStaff} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                {isManualAssigning ? 'Menyimpan...' : 'Simpan Tugas'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
 
-      {/* Toast System (Logic dipertahankan) */}
       <ToastContainer toasts={toasts} onRemove={remove} />
     </div>
   );

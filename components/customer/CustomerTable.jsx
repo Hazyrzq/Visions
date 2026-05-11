@@ -1,23 +1,23 @@
 'use client';
 import { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Search, Filter, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import RiskBadge from '@/components/dashboard/RiskBadge';
 import ChurnScoreBar from '@/components/dashboard/ChurnScoreBar';
-import CustomerModal from './CustomerModal';
-import Button from '@/components/ui/Button';
+import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const RISK_OPTIONS = ['Semua Risiko', 'Tinggi', 'Sedang', 'Rendah'];
 const PLAN_OPTIONS = ['Semua Plan', 'Enterprise', 'Professional', 'Starter'];
 
 export default function CustomerTable({ customers, loading }) {
-  const [search, setSearch]           = useState('');
-  const [riskFilter, setRiskFilter]   = useState('Semua Risiko');
-  const [planFilter, setPlanFilter]   = useState('Semua Plan');
-  const [sortKey, setSortKey]         = useState('churn_score');
-  const [sortDir, setSortDir]         = useState('desc');
-  const [selected, setSelected]       = useState(null);
-  const [modalOpen, setModalOpen]     = useState(false);
+  const router = useRouter();
+  
+  const [search, setSearch] = useState('');
+  const [riskFilter, setRiskFilter] = useState('Semua Risiko');
+  const [planFilter, setPlanFilter] = useState('Semua Plan');
+  const [sortKey, setSortKey] = useState('churn_score');
+  const [sortDir, setSortDir] = useState('desc');
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -26,9 +26,9 @@ export default function CustomerTable({ customers, loading }) {
 
   const filtered = useMemo(() => {
     let data = [...customers];
-    if (search)                           data = data.filter(c => c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_id.toLowerCase().includes(search.toLowerCase()));
-    if (riskFilter !== 'Semua Risiko')    data = data.filter(c => c.risk_level === riskFilter);
-    if (planFilter !== 'Semua Plan')      data = data.filter(c => c.plan_type === planFilter);
+    if (search) data = data.filter(c => c.company_name.toLowerCase().includes(search.toLowerCase()) || c.customer_id.toLowerCase().includes(search.toLowerCase()));
+    if (riskFilter !== 'Semua Risiko') data = data.filter(c => c.risk_level === riskFilter);
+    if (planFilter !== 'Semua Plan') data = data.filter(c => c.plan_type === planFilter);
     data.sort((a, b) => {
       const av = a[sortKey] ?? 0, bv = b[sortKey] ?? 0;
       return sortDir === 'asc' ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
@@ -55,7 +55,6 @@ export default function CustomerTable({ customers, loading }) {
 
   return (
     <>
-      {/* Toolbar */}
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
@@ -85,16 +84,14 @@ export default function CustomerTable({ customers, loading }) {
           >
             {PLAN_OPTIONS.map(o => <option key={o}>{o}</option>)}
           </select>
-          <Button variant="secondary" size="md" className="gap-2 whitespace-nowrap">
+          <Button variant="secondary" className="gap-2 whitespace-nowrap">
             <Download className="w-4 h-4" /> Export
           </Button>
         </div>
       </div>
 
-      {/* Count */}
       <div className="text-xs text-gray-400 mb-3">{filtered.length} pelanggan ditemukan</div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
         {loading ? (
           <div className="p-6"><TableSkeleton rows={6} /></div>
@@ -120,7 +117,7 @@ export default function CustomerTable({ customers, loading }) {
                 ) : filtered.map(c => (
                   <tr
                     key={c.id}
-                    onClick={() => { setSelected(c); setModalOpen(true); }}
+                    onClick={() => router.push(`/dashboard/admin/customer/${c.id}`)}
                     className="hover:bg-indigo-50/40 cursor-pointer transition-colors"
                   >
                     <td className="px-4 py-3 font-mono text-xs text-gray-500">{c.customer_id}</td>
@@ -146,8 +143,6 @@ export default function CustomerTable({ customers, loading }) {
           </div>
         )}
       </div>
-
-      <CustomerModal customer={selected} isOpen={modalOpen} onClose={() => setModalOpen(false)} />
     </>
   );
 }

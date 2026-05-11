@@ -107,7 +107,7 @@ export default function AdminDataPage() {
         .vs-toggle[data-state="true"] .vs-toggle-thumb { transform: translateX(16px); }
       `}</style>
 
-      <div className="max-w-[1200px] mx-auto space-y-6 pb-12">
+      <div className="w-full px-8 space-y-6 pb-12">
         
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">

@@ -1,5 +1,8 @@
 'use client';
 
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+
 import { Users, TrendingDown, TrendingUp, AlertTriangle, Activity, ArrowUpRight, ArrowRight, ShieldAlert, Brain } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 import {
@@ -20,7 +23,7 @@ export default function AdminOverviewPage() {
   const activeModel = mockModelHistory.find(m => m.status === 'Aktif');
 
   return (
-    <div className="vs-root space-y-6 max-w-[1200px] mx-auto pb-12">
+    <div className="vs-root w-full px-8 space-y-6 pb-12">
       {/* ─── CSS Global (Design System Visions) ─── */}
       <style jsx global>{`
         .vs-root {

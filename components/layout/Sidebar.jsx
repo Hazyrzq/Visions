@@ -116,7 +116,8 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
   return (
     <>
       {/* Desktop */}
-      <aside className={`hidden md:flex flex-col fixed inset-y-0 left-0 z-30 transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'}`}>
+      {/* Desktop */}
+      <aside className={`hidden md:flex flex-col relative h-full shrink-0 z-30 transition-all duration-300 ${collapsed ? 'w-16' : 'w-60'}`}>
         <Inner />
         <button
           onClick={() => setCollapsed(v => !v)}
