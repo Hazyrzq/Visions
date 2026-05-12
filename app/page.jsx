@@ -1,668 +1,591 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
-  ShieldCheck, Target, AlertOctagon, Lightbulb, Users, BarChart2, Brain,
-  Zap, CheckCircle, GraduationCap, Layers, ArrowUpRight, Sparkles,
-  LayoutDashboard, Settings, Search, Bell, TrendingDown,
+  motion,
+  useReducedMotion,
+} from 'framer-motion';
+import {
+  ShieldCheck,
+  ArrowRight,
+  ArrowUpRight,
+  TrendingDown,
+  AlertTriangle,
+  Zap,
+  Users,
+  BarChart2,
+  Activity,
+  CheckCircle2,
 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
-/* ============================================================
-   STYLES — di-inject sekali via <style jsx global>-style tag
-   ============================================================ */
-const STYLES = `
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght,SOFT@9..144,300..900,0..100&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
-:root {
-  --bg-deep: oklch(0.13 0.02 280);
-  --bg-base: oklch(0.16 0.02 280);
-  --bg-elev: oklch(0.20 0.025 280);
-  --bg-hi:   oklch(0.24 0.028 280);
-  --line:    oklch(0.30 0.02 280 / 0.6);
-  --line-soft: oklch(0.30 0.02 280 / 0.3);
-  --violet:  oklch(0.70 0.20 305);
-  --violet-soft: oklch(0.70 0.20 305 / 0.15);
-  --coral:   oklch(0.74 0.18 25);
-  --emerald: oklch(0.78 0.15 165);
-  --amber:   oklch(0.82 0.16 80);
-  --rose:    oklch(0.70 0.20 15);
-  --text-hi: oklch(0.98 0.005 280);
-  --text-md: oklch(0.78 0.015 280);
-  --text-lo: oklch(0.58 0.02 280);
-  --font-display: 'Fraunces', ui-serif, Georgia, serif;
-  --font-sans: 'Inter', ui-sans-serif, system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', ui-monospace, monospace;
-}
-
-.visions-root, .visions-root * { box-sizing: border-box; }
-.visions-root {
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  background-color: var(--bg-base);
-  color: var(--text-hi);
-  font-feature-settings: "ss01","cv11";
-}
-.visions-root ::selection { background: var(--violet); color: var(--bg-deep); }
-
-.visions-root .font-display { font-family: var(--font-display); }
-.visions-root .font-mono    { font-family: var(--font-mono); }
-
-.visions-root .text-hi { color: var(--text-hi); }
-.visions-root .text-md { color: var(--text-md); }
-.visions-root .text-lo { color: var(--text-lo); }
-.visions-root .bg-deep { background-color: var(--bg-deep); }
-.visions-root .bg-base { background-color: var(--bg-base); }
-.visions-root .bg-elev { background-color: var(--bg-elev); }
-.visions-root .bg-hi   { background-color: var(--bg-hi); }
-.visions-root .border-line { border-color: var(--line); }
-
-.visions-root .display { font-family: var(--font-sans); font-weight: 500; letter-spacing: -0.04em; line-height: 1; }
-.visions-root .display em {
-  font-family: var(--font-display); font-style: italic; font-weight: 300;
-  letter-spacing: -0.03em; font-variation-settings: "opsz" 144, "SOFT" 100;
-  background: linear-gradient(135deg, var(--violet), var(--coral));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-
-.visions-root .eyebrow {
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.16em;
-  text-transform: uppercase; color: var(--text-lo);
-}
-.visions-root .num-tab { font-variant-numeric: tabular-nums; }
-
-.visions-root .glass {
-  background: linear-gradient(180deg, oklch(1 0 0 / 0.04), oklch(1 0 0 / 0.01)), var(--bg-elev);
-  border: 1px solid var(--line);
-  box-shadow:
-    inset 0 1px 0 0 oklch(1 0 0 / 0.06),
-    0 1px 0 0 oklch(0 0 0 / 0.4),
-    0 30px 60px -20px oklch(0 0 0 / 0.5);
-  backdrop-filter: blur(20px);
-}
-
-.visions-root .pill {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.35rem 0.75rem; border-radius: 999px;
-  background: oklch(1 0 0 / 0.04); border: 1px solid var(--line);
-  font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em;
-  text-transform: uppercase; color: var(--text-md);
-}
-
-.visions-root .aurora {
-  position: absolute; inset: -20%; pointer-events: none;
-  background:
-    radial-gradient(60% 50% at 20% 20%, oklch(0.70 0.20 305 / 0.35), transparent 60%),
-    radial-gradient(50% 50% at 85% 30%, oklch(0.74 0.18 25 / 0.28), transparent 60%),
-    radial-gradient(70% 50% at 50% 90%, oklch(0.65 0.18 240 / 0.25), transparent 60%);
-  filter: blur(80px) saturate(1.2); opacity: 0.85;
-}
-
-.visions-root .grid-bg {
-  background-image:
-    linear-gradient(to right, oklch(1 0 0 / 0.04) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(1 0 0 / 0.04) 1px, transparent 1px);
-  background-size: 56px 56px;
-  mask-image: radial-gradient(ellipse 80% 60% at 50% 0%, black 30%, transparent 80%);
-}
-
-.visions-root .btn-primary {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.85rem 1.4rem; border-radius: 999px;
-  font-size: 14px; font-weight: 500; color: var(--bg-deep);
-  background: linear-gradient(180deg, oklch(0.98 0.005 280), oklch(0.92 0.01 280));
-  box-shadow:
-    0 0 0 1px oklch(1 0 0 / 0.2),
-    inset 0 1px 0 0 oklch(1 0 0 / 0.5),
-    0 8px 24px -6px oklch(0 0 0 / 0.5),
-    0 0 40px -10px var(--violet);
-  transition: transform .25s cubic-bezier(.16,1,.3,1), box-shadow .25s ease;
-  text-decoration: none;
-}
-.visions-root .btn-primary:hover {
-  transform: translateY(-1px);
-  box-shadow:
-    0 0 0 1px oklch(1 0 0 / 0.25),
-    inset 0 1px 0 0 oklch(1 0 0 / 0.6),
-    0 12px 32px -6px oklch(0 0 0 / 0.6),
-    0 0 60px -10px var(--violet);
-}
-
-.visions-root .btn-ghost {
-  display: inline-flex; align-items: center; gap: 0.5rem;
-  padding: 0.85rem 1.4rem; border-radius: 999px;
-  font-size: 14px; font-weight: 500; color: var(--text-hi);
-  background: oklch(1 0 0 / 0.04); border: 1px solid var(--line);
-  transition: background .2s ease; text-decoration: none;
-}
-.visions-root .btn-ghost:hover { background: oklch(1 0 0 / 0.08); }
-
-.visions-root .gradient-text {
-  background: linear-gradient(135deg, var(--violet), var(--coral) 60%, oklch(0.82 0.16 80));
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-
-@keyframes visions-rise { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
-.visions-root .rise { animation: visions-rise 0.9s cubic-bezier(0.16,1,0.3,1) both; }
-
-@keyframes visions-floaty { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-6px) } }
-.visions-root .floaty { animation: visions-floaty 6s ease-in-out infinite; }
+const G = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 `;
 
-/* ============================================================
-   DASHBOARD PREVIEW (inline)
-   ============================================================ */
-const customers = [
-  { name: 'Acme Corp',      score: 87, risk: 'Tinggi',  tone: 'rose',    init: 'AC', days: '2d' },
-  { name: 'Northwind Ltd',  score: 64, risk: 'Sedang',  tone: 'amber',   init: 'NW', days: '5d' },
-  { name: 'Globex Studio',  score: 42, risk: 'Sedang',  tone: 'amber',   init: 'GS', days: '1w' },
-  { name: 'Initech',        score: 21, risk: 'Rendah',  tone: 'emerald', init: 'IT', days: '2w' },
-  { name: 'Umbrella SaaS',  score: 92, risk: 'Tinggi',  tone: 'rose',    init: 'US', days: '1d' },
+const E = [0.16, 1, 0.3, 1];
+/** Dasar viewport scroll; `once` di-set di dalam komponen (ulang tiap scroll kecuali reduced motion) */
+const VIEWPORT_SCROLL = { amount: 0.2, margin: '0px 0px -40px 0px' };
+
+const BRAND = '#2563EB';
+const BRAND_HOVER = '#1d4ed8';
+const BRAND_SOFT = '#EFF6FF';
+const MUTED = '#6B7280';
+const COOL_BG = '#F4F6F8';
+
+const HERO_IMG =
+  'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=2000&q=80';
+const MANFAAT_IMG =
+  'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80';
+
+const HERO_WORDS = ['Tahu', 'pelanggan', 'yang', 'hampir', 'pergi', '—', 'sebelum', 'terlambat.'];
+
+const springSnappy = { type: 'spring', stiffness: 420, damping: 28 };
+const springSoft = { type: 'spring', stiffness: 260, damping: 22 };
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 28 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.52, ease: E } },
+};
+const fadeUpSm = {
+  hidden: { opacity: 0, y: 18 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.45, ease: E } },
+};
+const fadeIn = {
+  hidden: { opacity: 0 },
+  visible: { opacity: 1, transition: { duration: 0.5, ease: E } },
+};
+const slideLeft = {
+  hidden: { opacity: 0, x: -36 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.55, ease: E } },
+};
+const slideRight = {
+  hidden: { opacity: 0, x: 40 },
+  visible: { opacity: 1, x: 0, transition: { duration: 0.55, ease: E } },
+};
+const scaleIn = {
+  hidden: { opacity: 0, y: 20, scale: 0.96 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { ...springSnappy },
+  },
+};
+const stg = { hidden: {}, visible: { transition: { staggerChildren: 0.07, delayChildren: 0.06 } } };
+const stgFast = { hidden: {}, visible: { transition: { staggerChildren: 0.05, delayChildren: 0.04 } } };
+const stgTight = { hidden: {}, visible: { transition: { staggerChildren: 0.045 } } };
+
+const NAV = [
+  ['#fitur', 'Fitur'],
+  ['#manfaat', 'Manfaat'],
 ];
 
-const toneClass = (t) => {
-  if (t === 'rose')  return { bg: 'rgba(244,63,94,0.15)',  text: 'rgb(253,164,175)', bar: 'var(--rose)' };
-  if (t === 'amber') return { bg: 'rgba(245,158,11,0.15)', text: 'rgb(252,211,77)',  bar: 'var(--amber)' };
-  return { bg: 'rgba(16,185,129,0.15)', text: 'rgb(110,231,183)', bar: 'var(--emerald)' };
-};
+const FEATURES = [
+  {
+    icon: TrendingDown,
+    title: 'Skor risiko per pelanggan',
+    desc: 'Skor 0–100 dari pola pemakaian, tiket, dan NPS supaya prioritas tim jelas.',
+  },
+  {
+    icon: AlertTriangle,
+    title: 'Prioritas otomatis',
+    desc: 'Antrean pelanggan berisiko tersusun otomatis agar tidak ada yang terlewat.',
+  },
+  {
+    icon: Zap,
+    title: 'Rekomendasi konkret',
+    desc: 'Langkah tindak lanjut per pelanggan sehingga staf tidak mulai dari nol.',
+  },
+  {
+    icon: Users,
+    title: 'Distribusi ke tim staf',
+    desc: 'Assign ke anggota tim secara merata atau manual sesuai kebijakan Anda.',
+  },
+  {
+    icon: BarChart2,
+    title: 'Laporan retensi',
+    desc: 'Ringkasan retention, churn, dan performa tim untuk rapat atau laporan.',
+  },
+  {
+    icon: Activity,
+    title: 'Dua peran, satu platform',
+    desc: 'Admin melihat gambaran besar; staf fokus pada pelanggan yang ditugaskan.',
+  },
+];
 
-function DashboardPreview() {
+const MANFAAT_ITEMS = [
+  { n: '01', title: 'Pantau risiko churn secara real-time' },
+  { n: '02', title: 'Tugaskan pelanggan ke tim CS' },
+  { n: '03', title: 'Laporan siap untuk keputusan retensi' },
+];
+
+/** Orbs halus di hero — “hidup” tanpa mengganggu baca */
+function HeroAmbience({ reduced }) {
+  if (reduced) return null;
   return (
-    <div className="glass rounded-2xl overflow-hidden w-full" style={{ background: 'var(--bg-elev)' }}>
-      <div className="flex items-center gap-2 px-4 py-3 border-b border-line">
-        <span className="w-3 h-3 rounded-full" style={{ background: '#FF5F57' }} />
-        <span className="w-3 h-3 rounded-full" style={{ background: '#FEBC2E' }} />
-        <span className="w-3 h-3 rounded-full" style={{ background: '#28C840' }} />
-        <div className="flex-1 flex justify-center">
-          <div className="px-3 py-1 rounded-md text-[11px] font-mono text-lo bg-deep border border-line flex items-center gap-2">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-            visions.app/dashboard
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-12">
-        <aside className="col-span-2 border-r border-line p-3 hidden md:block">
-          <div className="flex items-center gap-2 px-2 py-2 mb-4">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
-              <ShieldCheck className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="text-xs font-semibold">Visions</span>
-          </div>
-          {[
-            { icon: LayoutDashboard, label: 'Overview', active: true },
-            { icon: Users, label: 'Pelanggan' },
-            { icon: BarChart2, label: 'Analytics' },
-            { icon: Settings, label: 'Pengaturan' },
-          ].map(({ icon: Icon, label, active }) => (
-            <div key={label} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-[11px] mb-0.5"
-              style={{ background: active ? 'var(--violet-soft)' : 'transparent', color: active ? 'var(--text-hi)' : 'var(--text-lo)' }}>
-              <Icon className="w-3.5 h-3.5" strokeWidth={1.5} />
-              {label}
-            </div>
-          ))}
-        </aside>
-
-        <main className="col-span-12 md:col-span-10 p-5">
-          <div className="flex items-center justify-between mb-5">
-            <div>
-              <div className="text-[11px] eyebrow mb-1">Customer Success</div>
-              <div className="text-[15px] font-semibold">Selamat pagi, Ari</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-md bg-deep border border-line text-[11px] text-lo">
-                <Search className="w-3 h-3" /> Cari pelanggan…
-              </div>
-              <div className="w-7 h-7 rounded-md bg-deep border border-line flex items-center justify-center">
-                <Bell className="w-3.5 h-3.5 text-lo" />
-              </div>
-              <div className="w-7 h-7 rounded-full" style={{ background: 'linear-gradient(135deg, var(--coral), var(--violet))' }} />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            {[
-              { label: 'Akurasi Model',   value: '94.2', suf: '%', trend: '+1.4%',       color: 'var(--violet)' },
-              { label: 'Berisiko Tinggi', value: '128',  suf: '',  trend: '+12',         color: 'var(--coral)' },
-              { label: 'Diselamatkan',    value: '47',   suf: '',  trend: 'minggu ini',  color: 'var(--emerald)' },
-            ].map((k) => (
-              <div key={k.label} className="rounded-xl p-3 bg-deep border border-line">
-                <div className="text-[10px] eyebrow mb-2">{k.label}</div>
-                <div className="flex items-baseline gap-1.5">
-                  <div className="text-2xl font-display font-medium num-tab" style={{ color: k.color }}>{k.value}</div>
-                  <div className="text-xs text-lo">{k.suf}</div>
-                </div>
-                <div className="text-[10px] text-md mt-1 flex items-center gap-1">
-                  <ArrowUpRight className="w-2.5 h-2.5" /> {k.trend}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-3 gap-3 mb-4">
-            <div className="col-span-2 rounded-xl p-4 bg-deep border border-line">
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-[11px] font-semibold">Distribusi Risiko</div>
-                <div className="text-[10px] text-lo font-mono">7 hari</div>
-              </div>
-              {[
-                { label: 'Tinggi', pct: 22, color: 'var(--rose)',    val: '128' },
-                { label: 'Sedang', pct: 41, color: 'var(--amber)',   val: '240' },
-                { label: 'Rendah', pct: 78, color: 'var(--emerald)', val: '456' },
-              ].map((b) => (
-                <div key={b.label} className="mb-2.5 last:mb-0">
-                  <div className="flex items-center justify-between text-[10px] mb-1">
-                    <span className="text-md">{b.label}</span>
-                    <span className="text-lo num-tab">{b.val}</span>
-                  </div>
-                  <div className="h-1.5 rounded-full bg-hi overflow-hidden">
-                    <div className="h-full rounded-full" style={{ width: `${b.pct}%`, background: `linear-gradient(90deg, ${b.color}, ${b.color}aa)` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="rounded-xl p-4 bg-deep border border-line relative overflow-hidden">
-              <div className="text-[11px] font-semibold mb-1">Churn Rate</div>
-              <div className="text-2xl font-display font-medium num-tab gradient-text">4.8<span className="text-sm">%</span></div>
-              <div className="text-[10px] text-emerald-400 flex items-center gap-1 mt-0.5">
-                <TrendingDown className="w-3 h-3" /> -0.6% MoM
-              </div>
-              <svg viewBox="0 0 120 40" className="absolute bottom-2 left-2 right-2 w-[calc(100%-1rem)] h-12">
-                <defs>
-                  <linearGradient id="visions-spark" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0%" stopColor="var(--violet)" stopOpacity="0.5" />
-                    <stop offset="100%" stopColor="var(--violet)" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                <path d="M0,28 L15,22 L30,26 L45,18 L60,20 L75,12 L90,16 L105,8 L120,10 L120,40 L0,40 Z" fill="url(#visions-spark)" />
-                <path d="M0,28 L15,22 L30,26 L45,18 L60,20 L75,12 L90,16 L105,8 L120,10" fill="none" stroke="var(--violet)" strokeWidth="1.2" />
-              </svg>
-            </div>
-          </div>
-
-          <div className="rounded-xl bg-deep border border-line overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-2.5 border-b border-line">
-              <div className="text-[11px] font-semibold">Pelanggan Berisiko</div>
-              <div className="text-[10px] text-lo font-mono">5 dari 824</div>
-            </div>
-            <div className="divide-y divide-[var(--line)]">
-              {customers.map((c) => {
-                const t = toneClass(c.tone);
-                return (
-                  <div key={c.name} className="grid grid-cols-12 items-center px-4 py-2.5 text-[11px]">
-                    <div className="col-span-5 flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-md flex items-center justify-center text-[9px] font-semibold" style={{ background: t.bg, color: t.text }}>{c.init}</div>
-                      <span className="text-md">{c.name}</span>
-                    </div>
-                    <div className="col-span-4 flex items-center gap-2">
-                      <div className="h-1 flex-1 rounded-full bg-hi overflow-hidden">
-                        <div className="h-full" style={{ width: `${c.score}%`, background: t.bar }} />
-                      </div>
-                      <span className="num-tab text-md w-6 text-right">{c.score}</span>
-                    </div>
-                    <div className="col-span-2 text-center">
-                      <span className="px-2 py-0.5 rounded-full text-[9px] font-semibold" style={{ background: t.bg, color: t.text }}>{c.risk}</span>
-                    </div>
-                    <div className="col-span-1 text-right text-lo font-mono text-[10px]">{c.days}</div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </main>
-      </div>
+    <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-[inherit]">
+      <motion.div
+        className="absolute -right-[20%] -top-[30%] h-[55%] w-[55%] rounded-full bg-blue-500/25 blur-[100px]"
+        animate={{ opacity: [0.35, 0.55, 0.35], scale: [1, 1.06, 1] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
+      />
+      <motion.div
+        className="absolute -bottom-[25%] -left-[15%] h-[45%] w-[45%] rounded-full bg-indigo-500/20 blur-[90px]"
+        animate={{ opacity: [0.25, 0.45, 0.25], x: [0, 12, 0] }}
+        transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut', delay: 1 }}
+      />
     </div>
   );
 }
 
-/* ============================================================
-   DATA
-   ============================================================ */
-const NAV_LINKS = [
-  { href: '#tentang', label: 'Tentang' },
-  { href: '#fitur',   label: 'Fitur' },
-  { href: '#manfaat', label: 'Manfaat' },
-];
+function FeatureCard({ icon: Icon, title, desc, index, reduced }) {
+  return (
+    <motion.div
+      variants={scaleIn}
+      whileHover={
+        reduced
+          ? {}
+          : {
+              y: -6,
+              boxShadow: '0 20px 40px -12px rgba(37, 99, 235, 0.18)',
+              transition: springSoft,
+            }
+      }
+      whileTap={{ scale: 0.99 }}
+      className="group relative overflow-hidden rounded-2xl border border-slate-200/90 bg-white p-6 shadow-sm"
+    >
+      {!reduced && (
+        <motion.div
+          className="pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br from-blue-400/20 to-transparent opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100"
+        />
+      )}
+      <div className="relative">
+        <motion.div
+          className="mb-4 flex h-11 w-11 items-center justify-center rounded-xl border border-blue-100 bg-blue-50 text-blue-600"
+          whileHover={reduced ? {} : { rotate: [0, -6, 6, 0], transition: { duration: 0.45 } }}
+        >
+          <motion.div
+            animate={reduced ? {} : { y: [0, -2.5, 0] }}
+            transition={{
+              duration: 3.2 + index * 0.15,
+              repeat: Infinity,
+              ease: 'easeInOut',
+              delay: index * 0.2,
+            }}
+          >
+            <Icon className="h-5 w-5" strokeWidth={1.75} />
+          </motion.div>
+        </motion.div>
+        <h3 className="mb-2 text-[16px] font-bold text-slate-900 transition-colors group-hover:text-blue-700">{title}</h3>
+        <p className="text-[14px] leading-relaxed" style={{ color: MUTED }}>
+          {desc}
+        </p>
+      </div>
+    </motion.div>
+  );
+}
 
-const STATS = [
-  { value: '94.2%',  label: 'Akurasi Model' },
-  { value: '0.93',   label: 'AUC-ROC Score' },
-  { value: '47+',    label: 'Fitur Prediksi' },
-  { value: '<200ms', label: 'Latency Inferensi' },
-];
-
-const FEATURES = [
-  { icon: Target,       title: 'Churn Score 0–100',    desc: 'Setiap pelanggan mendapat skor risiko otomatis berdasarkan pola perilaku dan riwayat penggunaan platform.', color: 'var(--violet)' },
-  { icon: AlertOctagon, title: 'Risk Level Real-time', desc: 'Klasifikasi Tinggi / Sedang / Rendah diperbarui berkala untuk memudahkan prioritisasi tindakan CS.',         color: 'var(--coral)' },
-  { icon: Lightbulb,    title: 'Rekomendasi Retensi',  desc: 'Aksi spesifik yang dipersonalisasi per pelanggan dihasilkan otomatis berdasarkan profil risiko.',             color: 'var(--amber)' },
-  { icon: Users,        title: 'Manajemen Staff',      desc: 'Assign pelanggan berisiko ke tim Customer Success dan pantau workload serta performa setiap anggota.',         color: 'var(--emerald)' },
-  { icon: BarChart2,    title: 'Dashboard Analytics',  desc: 'Visualisasi tren churn rate dan distribusi risiko dengan chart interaktif yang mudah dibaca.',                 color: 'var(--violet)' },
-  { icon: Brain,        title: 'Model ML Canggih',     desc: 'XGBoost, LightGBM, CatBoost + Deep Learning MLP — ensemble model untuk prediksi yang presisi.',                color: 'var(--coral)' },
-];
-
-const BENEFITS = [
-  { icon: Target,    title: 'Prioritas jelas, bukan tebak-tebakan', desc: 'Fokus ke pelanggan yang paling butuh perhatian hari ini—berdasarkan churn score dan sinyal risiko.' },
-  { icon: Zap,       title: 'Aksi retensi lebih cepat dieksekusi',  desc: 'Rekomendasi tindakan spesifik membantu tim CS bergerak cepat tanpa menyusun strategi dari nol.' },
-  { icon: BarChart2, title: 'Tim & performa jadi lebih terukur',    desc: 'Lihat dampak intervensi, tren churn, dan workload staff dalam satu dashboard yang rapi.' },
-];
-
-/* ============================================================
-   PAGE
-   ============================================================ */
 export default function LandingPage() {
   const router = useRouter();
-  const [isLeaving, setIsLeaving] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+  const reduceMotion = useReducedMotion() ?? false;
 
-  const navigateWithLeave = useCallback(
+  /** Animasi `whileInView` ulang setiap kali elemen masuk layar; jika reduced motion → hanya sekali */
+  const vpScroll = useMemo(
+    () => ({ ...VIEWPORT_SCROLL, once: reduceMotion === true }),
+    [reduceMotion],
+  );
+
+  const go = useCallback(
     (path) => (e) => {
-      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey) return;
       e.preventDefault();
-      if (isLeaving) return;
-      setIsLeaving(true);
-      window.setTimeout(() => router.push(path), 110);
+      if (leaving) return;
+      setLeaving(true);
+      setTimeout(() => router.push(path), 80);
     },
-    [router, isLeaving]
+    [router, leaving],
   );
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{ __html: STYLES }} />
-      <div className="visions-root min-h-screen bg-base text-hi overflow-x-hidden relative">
-        {/* NAV */}
-        <nav className="fixed top-4 inset-x-0 z-50 flex justify-center px-4">
-          <div className="glass rounded-full pl-3 pr-2 py-2 flex items-center gap-2 max-w-[920px] w-full">
-            <Link href="/" className="flex items-center gap-2 pl-2 pr-3 group">
-              <div className="w-6 h-6 rounded-md flex items-center justify-center" style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
-                <ShieldCheck className="w-3.5 h-3.5 text-white" />
-              </div>
-              <span className="text-sm font-semibold tracking-tight">Visions</span>
-            </Link>
+      <style dangerouslySetInnerHTML={{ __html: G }} />
+      <div className="min-h-screen bg-white text-slate-900 antialiased" style={{ fontFamily: "'Inter',sans-serif" }}>
 
-            <div className="hidden md:flex items-center gap-1 mx-auto">
-              {NAV_LINKS.map((n) => (
-                <a key={n.href} href={n.href} className="px-3 py-1.5 rounded-full text-[13px] text-md hover:text-hi hover:bg-white/5 transition-colors">
-                  {n.label}
-                </a>
+        <motion.header
+          initial={{ opacity: 0, y: -12 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.45, ease: E }}
+          className="sticky top-0 z-50 border-b border-slate-100 bg-white/90 backdrop-blur-md"
+        >
+          <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-4 sm:px-6 lg:px-8">
+            <motion.div whileHover={reduceMotion ? {} : { scale: 1.02 }} whileTap={{ scale: 0.98 }}>
+              <Link href="/" className="flex shrink-0 items-center gap-2.5">
+                <motion.span
+                  className="flex h-9 w-9 items-center justify-center rounded-xl text-white shadow-md shadow-blue-500/25"
+                  style={{ backgroundColor: BRAND }}
+                  animate={reduceMotion ? {} : { boxShadow: ['0 4px 14px rgba(37,99,235,0.25)', '0 6px 22px rgba(37,99,235,0.38)', '0 4px 14px rgba(37,99,235,0.25)'] }}
+                  transition={{ duration: 3.5, repeat: Infinity, ease: 'easeInOut' }}
+                >
+                  <ShieldCheck className="h-[18px] w-[18px]" strokeWidth={2} />
+                </motion.span>
+                <span className="text-[16px] font-bold tracking-tight text-slate-900">Visions</span>
+              </Link>
+            </motion.div>
+
+            <nav className="hidden flex-1 items-center justify-center gap-0.5 md:flex">
+              {NAV.map(([href, label]) => (
+                <motion.a
+                  key={href}
+                  href={href}
+                  whileHover={reduceMotion ? { y: 0 } : { y: -2 }}
+                  whileTap={{ scale: 0.97 }}
+                  transition={springSnappy}
+                  className="rounded-lg px-3 py-2 text-[14px] font-medium text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
+                >
+                  {label}
+                </motion.a>
               ))}
-            </div>
+            </nav>
 
-            <a href="/login" onClick={navigateWithLeave('/login')}
-              className="ml-auto md:ml-0 inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-[13px] font-medium bg-white hover:gap-2.5 transition-all"
-              style={{ color: 'var(--bg-deep)' }}>
-              Login <ArrowUpRight className="w-3.5 h-3.5" />
-            </a>
-          </div>
-        </nav>
-
-        {/* HERO */}
-        <section className="relative pt-36 pb-32 px-6 overflow-hidden">
-          <div className="aurora" />
-          <div className="absolute inset-0 grid-bg pointer-events-none" />
-
-          <div className="relative max-w-[1200px] mx-auto text-center">
-            <div className="rise inline-flex items-center gap-2 pill mb-8" style={{ animationDelay: '.05s' }}>
-              <Sparkles className="w-3 h-3" style={{ color: 'var(--violet)' }} />
-              <span>Platform Retensi Pelanggan SaaS</span>
-            </div>
-
-            <h1 className="rise display text-[clamp(48px,8vw,112px)] mb-8" style={{ animationDelay: '.1s' }}>
-              Cegah <em>churn</em>
-              <br />sebelum terjadi.
-            </h1>
-
-            <p className="rise text-[17px] md:text-[19px] text-md max-w-2xl mx-auto leading-relaxed mb-10" style={{ animationDelay: '.2s' }}>
-              Visions membantu tim Customer Success melihat pelanggan yang mulai menjauh lebih awal—dengan
-              Machine Learning—supaya fokus ke tindakan yang paling berdampak.
-            </p>
-
-            <div className="rise flex flex-wrap items-center justify-center gap-3 mb-20" style={{ animationDelay: '.3s' }}>
-              <a href="/login" onClick={navigateWithLeave('/login')} className={`btn-primary ${isLeaving ? 'opacity-70' : ''}`}>
-                Masuk ke Dashboard <ArrowUpRight className="w-4 h-4" />
-              </a>
-              <a href="#fitur" className="btn-ghost">Lihat fitur</a>
-            </div>
-
-            <div className="rise relative max-w-[1100px] mx-auto" style={{ animationDelay: '.45s' }}>
-              <div className="absolute -inset-x-10 -inset-y-6 rounded-3xl pointer-events-none"
-                style={{ background: 'radial-gradient(60% 60% at 50% 0%, oklch(0.70 0.20 305 / 0.25), transparent 70%)', filter: 'blur(40px)' }} />
-              <DashboardPreview />
-              <div className="absolute inset-x-0 -bottom-1 h-32 pointer-events-none"
-                style={{ background: 'linear-gradient(to bottom, transparent, var(--bg-base))' }} />
+            <div className="ml-auto flex shrink-0 items-center gap-2">
+              <nav className="flex items-center gap-0.5 md:hidden">
+                {NAV.map(([href, label]) => (
+                  <a key={href} href={href} className="rounded-md px-1.5 py-1.5 text-[11px] font-medium text-slate-600 sm:px-2 sm:text-xs">
+                    {label}
+                  </a>
+                ))}
+              </nav>
+              <motion.a
+                href="/login"
+                onClick={go('/login')}
+                whileHover={{ scale: 1.04 }}
+                whileTap={{ scale: 0.96 }}
+                transition={springSnappy}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13px] font-semibold text-white shadow-sm sm:px-5 sm:py-2.5',
+                  leaving && 'pointer-events-none opacity-60',
+                )}
+                style={{ backgroundColor: BRAND }}
+              >
+                Mulai sekarang
+                <motion.span animate={reduceMotion ? {} : { x: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}>
+                  <ArrowUpRight className="h-3.5 w-3.5 opacity-90" />
+                </motion.span>
+              </motion.a>
             </div>
           </div>
-        </section>
+        </motion.header>
 
-        {/* STATS */}
-        <section className="px-6 -mt-8 relative z-10">
-          <div className="max-w-[1100px] mx-auto glass rounded-2xl px-6 py-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-y-6">
-              {STATS.map((s, i) => (
-                <div key={s.label} className={`px-4 ${i < STATS.length - 1 ? 'md:border-r md:border-line' : ''}`}>
-                  <div className="text-2xl md:text-3xl font-display font-medium num-tab gradient-text">{s.value}</div>
-                  <div className="text-[11px] eyebrow mt-1">{s.label}</div>
+        <main className="pb-4">
+          <section className="px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+            <div className="mx-auto max-w-6xl">
+              <motion.div
+                initial={{ opacity: 0, y: 24 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: E }}
+                className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-slate-900 shadow-[0_20px_50px_-15px_rgba(37,99,235,0.15)] md:rounded-[2rem]"
+              >
+                <HeroAmbience reduced={reduceMotion} />
+                <div className="relative min-h-[380px] md:min-h-[440px]">
+                  <div className="absolute inset-0 overflow-hidden">
+                    <img
+                      src={HERO_IMG}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                    />
+                  </div>
+                  <div className="absolute inset-0 z-[1] bg-gradient-to-t from-black/80 via-black/45 to-black/25" />
+                  <div
+                    className="relative z-[2] flex min-h-[380px] flex-col justify-end p-6 pb-8 text-white md:min-h-[440px] md:p-10 md:pb-10 lg:p-12"
+                    style={{ color: '#ffffff' }}
+                  >
+                    <div className="max-w-[680px] [&_h1]:text-white [&_h1_span]:text-white [&_p]:text-white">
+                      <motion.p
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1, duration: 0.45, ease: E }}
+                        className="mb-3 flex flex-wrap items-center gap-2 text-[13px] font-semibold text-blue-100"
+                        style={{ color: '#dbeafe' }}
+                      >
+                        <span className="relative flex h-2 w-2">
+                          {!reduceMotion && (
+                            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60" />
+                          )}
+                          <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                        </span>
+                        Platform Customer Success & churn
+                      </motion.p>
+                      <h1
+                        className="max-w-[680px] text-[clamp(28px,4.5vw,48px)] font-extrabold leading-[1.12] tracking-[-0.03em] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)]"
+                        style={{ color: '#ffffff' }}
+                      >
+                        {HERO_WORDS.map((w, i) => (
+                          <motion.span
+                            key={`${w}-${i}`}
+                            initial={{ opacity: 0, y: 16 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.12 + i * 0.045, duration: 0.42, ease: E }}
+                            className="mr-[0.2em] inline-block text-white"
+                            style={{ color: '#ffffff' }}
+                          >
+                            {w}
+                          </motion.span>
+                        ))}
+                      </h1>
+                      <motion.p
+                        initial={{ opacity: 0, y: 14 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.52, duration: 0.45, ease: E }}
+                        className="mt-4 max-w-[520px] text-[15px] leading-relaxed text-white/90"
+                        style={{ color: 'rgba(255,255,255,0.92)' }}
+                      >
+                        Skor risiko, prioritas otomatis, dan tugas untuk tim dalam satu tempat.
+                      </motion.p>
+                      <motion.div
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.68, duration: 0.45, ease: E }}
+                        className="mt-8 flex flex-wrap gap-4"
+                      >
+                        <motion.a
+                          href="/login"
+                          onClick={go('/login')}
+                          whileHover={{ scale: 1.04, y: -1 }}
+                          whileTap={{ scale: 0.97 }}
+                          transition={springSnappy}
+                          className={cn(
+                            'inline-flex items-center gap-2 rounded-full bg-white px-6 py-3 text-[14px] font-semibold text-blue-700 shadow-lg shadow-black/15 transition-colors hover:bg-blue-50',
+                            leaving && 'pointer-events-none opacity-60',
+                          )}
+                        >
+                          Mulai sekarang <ArrowRight className="h-4 w-4" />
+                        </motion.a>
+                        <motion.a
+                          href="#fitur"
+                          whileHover={{ scale: 1.02, backgroundColor: 'rgba(255,255,255,0.2)' }}
+                          whileTap={{ scale: 0.98 }}
+                          transition={springSnappy}
+                          className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 py-3 text-[14px] font-semibold text-white backdrop-blur-sm"
+                          style={{ color: '#ffffff' }}
+                        >
+                          Lihat fitur
+                        </motion.a>
+                      </motion.div>
+                    </div>
+                  </div>
                 </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* TENTANG */}
-        <section id="tentang" className="py-32 px-6">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
-              <div>
-                <div className="pill mb-6"><span style={{ color: 'var(--violet)' }}>01</span> Tentang</div>
-                <h2 className="display text-4xl md:text-6xl mb-8">
-                  Solusi cerdas untuk <em>retensi</em> pelanggan SaaS.
-                </h2>
-                <p className="text-md text-[16px] leading-relaxed mb-5">
-                  Visions adalah platform prediksi churn yang dibangun oleh Tim Visions, Politeknik Negeri Jakarta,
-                  sebagai solusi nyata untuk tantangan retensi di industri SaaS.
-                </p>
-                <p className="text-md text-[16px] leading-relaxed mb-10">
-                  Menggabungkan algoritma Machine Learning seperti XGBoost, LightGBM, dan Deep Learning, platform ini
-                  mampu mengidentifikasi pelanggan berisiko tinggi dan memberikan rekomendasi tindakan yang spesifik
-                  dan terukur.
-                </p>
-
-                <div className="space-y-3">
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={{ ...vpScroll, amount: 0.3 }}
+                  variants={stgTight}
+                  className="relative grid grid-cols-3 divide-x divide-slate-200 bg-white"
+                >
                   {[
-                    { icon: Brain, text: 'Ditenagai algoritma ML & Deep Learning terkini' },
-                    { icon: Layers, text: 'Arsitektur role-based: Admin & Staff CS' },
-                    { icon: GraduationCap, text: 'Dikembangkan oleh Tim Visions — PNJ, didukung LapisAI' },
-                  ].map(({ icon: Icon, text }) => (
-                    <div key={text} className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                        style={{ background: 'var(--violet-soft)', border: '1px solid var(--line)' }}>
-                        <Icon className="w-4 h-4" style={{ color: 'var(--violet)' }} strokeWidth={1.5} />
-                      </div>
-                      <span className="text-sm text-md">{text}</span>
-                    </div>
+                    { v: '24/7', l: 'Pemantauan' },
+                    { v: '< 2s', l: 'Update skor' },
+                    { v: '100%', l: 'Berbasis data' },
+                  ].map((s) => (
+                    <motion.div key={s.l} variants={fadeUpSm} className="px-3 py-5 text-center sm:py-6 md:px-6">
+                      <motion.p
+                        className="text-lg font-extrabold tracking-tight text-slate-900 sm:text-xl md:text-2xl"
+                        whileInView={reduceMotion ? {} : { scale: [0.92, 1] }}
+                        viewport={vpScroll}
+                        transition={springSnappy}
+                      >
+                        {s.v}
+                      </motion.p>
+                      <p className="mt-1 text-[11px] font-medium text-slate-500 sm:text-xs">{s.l}</p>
+                    </motion.div>
                   ))}
-                </div>
-              </div>
+                </motion.div>
+              </motion.div>
+            </div>
+          </section>
 
-              <div className="relative">
-                <div className="absolute -inset-8 rounded-3xl pointer-events-none"
-                  style={{ background: 'radial-gradient(50% 60% at 50% 50%, oklch(0.70 0.20 305 / 0.25), transparent 70%)', filter: 'blur(60px)' }} />
-                <div className="relative glass rounded-2xl p-7">
-                  <div className="flex items-center justify-between mb-6 pb-5 border-b border-line">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl flex items-center justify-center"
-                        style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
-                        <ShieldCheck className="w-5 h-5 text-white" />
-                      </div>
-                      <div>
-                        <div className="text-sm font-semibold">Visions</div>
-                        <div className="text-[11px] text-lo font-mono">ChurnShield · v1.0</div>
-                      </div>
-                    </div>
-                    <span className="pill text-[10px]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Live
-                    </span>
-                  </div>
-
-                  {[
-                    { label: 'Dibuat oleh', value: 'Tim Visions — PNJ' },
-                    { label: 'Mitra', value: 'LapisAI' },
-                    { label: 'Tech Stack', value: 'Next · Supabase · ML' },
-                    { label: 'Model Utama', value: 'Random Forest 94.2%' },
-                    { label: 'Dataset', value: '47+ fitur prediksi' },
-                  ].map((r, i, arr) => (
-                    <div key={r.label} className={`flex items-center justify-between py-3 ${i < arr.length - 1 ? 'border-b border-line' : ''}`}>
-                      <span className="text-[11px] eyebrow">{r.label}</span>
-                      <span className="text-[13px] font-medium">{r.value}</span>
-                    </div>
+          <section id="tentang" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20 lg:px-8 lg:py-24">
+            <div className="grid gap-10 lg:grid-cols-2 lg:items-start lg:gap-16">
+              <motion.h2
+                initial="hidden"
+                whileInView="visible"
+                viewport={vpScroll}
+                variants={slideLeft}
+                className="text-[clamp(22px,2.5vw,32px)] font-bold leading-snug tracking-tight text-slate-900"
+              >
+                Data retensi yang bisa dipercaya tim CS Anda.
+              </motion.h2>
+              <motion.div initial="hidden" whileInView="visible" viewport={vpScroll} variants={stg} className="space-y-5">
+                <motion.p variants={fadeUpSm} className="text-[15px] leading-relaxed" style={{ color: MUTED }}>
+                  Visions membantu tim Customer Success melihat siapa yang berisiko churn dan apa yang perlu dilakukan —
+                  tanpa spreadsheet panjang atau rapat ad hoc setiap minggu.
+                </motion.p>
+                <motion.ul variants={stgFast} className="space-y-3">
+                  {['Sinyal dari pemakaian produk & dukungan', 'Skor dan prioritas yang konsisten', 'Peran admin & staf dalam satu alur'].map((t) => (
+                    <motion.li key={t} variants={fadeUpSm} className="flex items-start gap-3 text-[14px] text-slate-700">
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        whileInView={{ scale: 1 }}
+                        viewport={vpScroll}
+                        transition={springSnappy}
+                        className="mt-0.5 shrink-0"
+                      >
+                        <CheckCircle2 className="h-5 w-5 text-blue-600" strokeWidth={2} />
+                      </motion.span>
+                      {t}
+                    </motion.li>
                   ))}
+                </motion.ul>
+              </motion.div>
+            </div>
+          </section>
+
+          <section id="fitur" className="border-t border-slate-100 py-16 sm:py-20" style={{ backgroundColor: COOL_BG }}>
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={vpScroll}
+                variants={stg}
+                className="mb-12 max-w-2xl lg:mb-14"
+              >
+                <motion.h2 variants={fadeUp} className="text-[clamp(24px,3vw,36px)] font-bold leading-tight tracking-tight text-slate-900">
+                  Fitur untuk tim yang fokus ke retensi
+                </motion.h2>
+                <motion.p variants={fadeUpSm} className="mt-3 text-[15px] leading-relaxed" style={{ color: MUTED }}>
+                  Dari skor risiko sampai laporan — dirancang untuk operasional harian CS.
+                </motion.p>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={vpScroll}
+                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }}
+                className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-10 lg:gap-y-10"
+              >
+                {FEATURES.map(({ icon, title, desc }, i) => (
+                  <FeatureCard key={title} icon={icon} title={title} desc={desc} index={i} reduced={reduceMotion} />
+                ))}
+              </motion.div>
+            </div>
+          </section>
+
+          <section id="manfaat" className="border-t border-slate-100 py-16 sm:py-20 lg:py-24">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              <div className="grid gap-10 lg:grid-cols-2 lg:items-stretch lg:gap-12">
+                <motion.div initial="hidden" whileInView="visible" viewport={vpScroll} variants={stg} className="flex flex-col">
+                  <motion.h2 variants={fadeUp} className="mb-8 text-[clamp(24px,3vw,34px)] font-bold leading-tight text-slate-900">
+                    Manfaat nyata untuk operasi CS
+                  </motion.h2>
+                  <ul className="flex-1 space-y-0">
+                    {MANFAAT_ITEMS.map((s, i) => (
+                      <motion.li
+                        key={s.n}
+                        variants={fadeUpSm}
+                        whileHover={reduceMotion ? {} : { x: 4 }}
+                        transition={springSoft}
+                        className={cn('flex gap-4 border-slate-100 py-6', i < MANFAAT_ITEMS.length - 1 && 'border-b')}
+                      >
+                        <span className="w-8 shrink-0 pt-0.5 text-[13px] font-bold tabular-nums text-slate-400">{s.n}</span>
+                        <div className="min-w-0">
+                          <p className="text-[16px] font-semibold text-slate-900">{s.title}</p>
+                        </div>
+                      </motion.li>
+                    ))}
+                  </ul>
+                </motion.div>
+
+                <motion.div
+                  initial="hidden"
+                  whileInView="visible"
+                  viewport={vpScroll}
+                  variants={slideRight}
+                  className="relative min-h-[280px] overflow-hidden rounded-3xl border border-slate-200 bg-slate-100 shadow-sm lg:min-h-0"
+                >
+                  <motion.img
+                    src={MANFAAT_IMG}
+                    alt=""
+                    className="absolute inset-0 h-full w-full object-cover"
+                    animate={reduceMotion ? {} : { scale: [1, 1.04, 1] }}
+                    transition={{ duration: 14, repeat: Infinity, ease: 'easeInOut' }}
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-tr from-blue-950/35 to-transparent" />
+                </motion.div>
+              </div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={vpScroll}
+                variants={stg}
+                className="relative mt-12 overflow-hidden rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 via-white to-blue-50/80 p-6 sm:flex-row sm:items-center sm:p-8"
+              >
+                {!reduceMotion && (
+                  <motion.div
+                    className="pointer-events-none absolute inset-0 opacity-40"
+                    style={{
+                      background: 'linear-gradient(110deg, transparent 40%, rgba(255,255,255,0.85) 50%, transparent 60%)',
+                      backgroundSize: '200% 100%',
+                    }}
+                    animate={{ backgroundPosition: ['200% 0', '-200% 0'] }}
+                    transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
+                  />
+                )}
+                <div className="relative flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
+                  <motion.div variants={fadeUpSm}>
+                    <h3 className="text-lg font-bold text-slate-900 sm:text-xl">Siap pakai bersama tim?</h3>
+                    <p className="mt-1 max-w-xl text-[14px] leading-relaxed" style={{ color: MUTED }}>
+                      Minta akses dari admin organisasi Anda, lalu masuk ke dashboard.
+                    </p>
+                  </motion.div>
+                  <motion.a
+                    href="/login"
+                    onClick={go('/login')}
+                    variants={fadeUpSm}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    transition={springSnappy}
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-2 rounded-full px-6 py-3 text-[14px] font-semibold text-white shadow-md shadow-blue-500/30',
+                      leaving && 'pointer-events-none opacity-60',
+                    )}
+                    style={{ backgroundColor: BRAND }}
+                  >
+                    Mulai sekarang <ArrowRight className="h-4 w-4" />
+                  </motion.a>
                 </div>
-              </div>
+              </motion.div>
             </div>
-          </div>
-        </section>
+          </section>
+        </main>
 
-        {/* FITUR */}
-        <section id="fitur" className="py-32 px-6 relative">
-          <div className="absolute inset-0 grid-bg pointer-events-none opacity-40" />
-          <div className="relative max-w-[1200px] mx-auto">
-            <div className="text-center mb-16">
-              <div className="pill mb-6"><span style={{ color: 'var(--violet)' }}>02</span> Fitur</div>
-              <h2 className="display text-4xl md:text-6xl mb-6">
-                Semua yang dibutuhkan tim <em>Customer Success</em>.
-              </h2>
-              <p className="text-md max-w-xl mx-auto leading-relaxed">
-                Dari prediksi hingga eksekusi—satu platform terintegrasi untuk mengelola retensi pelanggan SaaS
-                secara end-to-end.
-              </p>
-            </div>
-
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FEATURES.map((f, i) => {
-                const Icon = f.icon;
-                return (
-                  <div key={f.title}
-                    className="group relative glass rounded-2xl p-6 transition-transform duration-300 hover:-translate-y-1"
-                    style={{ animation: `visions-rise .7s cubic-bezier(.16,1,.3,1) ${0.06 * i}s both` }}>
-                    <div className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
-                      style={{ boxShadow: `inset 0 0 0 1px ${f.color}, 0 0 60px -20px ${f.color}` }} />
-                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-5"
-                      style={{ background: f.color.replace(')', ' / 0.15)'), border: `1px solid ${f.color.replace(')', ' / 0.25)')}` }}>
-                      <Icon className="w-5 h-5" style={{ color: f.color }} strokeWidth={1.5} />
-                    </div>
-                    <h3 className="text-[15px] font-semibold mb-2">{f.title}</h3>
-                    <p className="text-[13.5px] text-md leading-relaxed">{f.desc}</p>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* MANFAAT */}
-        <section id="manfaat" className="py-32 px-6 relative">
-          <div className="max-w-[1200px] mx-auto">
-            <div className="grid lg:grid-cols-12 gap-12 mb-16">
-              <div className="lg:col-span-5">
-                <div className="pill mb-6"><span style={{ color: 'var(--violet)' }}>03</span> Manfaat</div>
-                <h2 className="display text-4xl md:text-6xl">
-                  Dibuat untuk tim CS yang <em>kerja cepat</em>.
-                </h2>
-              </div>
-              <div className="lg:col-span-6 lg:col-start-7 flex items-end">
-                <p className="text-md text-[16px] leading-relaxed">
-                  Dari identifikasi risiko sampai langkah retensi—Visions bantu tim Anda mengambil keputusan yang
-                  konsisten, terukur, dan mudah dipantau.
-                </p>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-3 gap-4">
-              {BENEFITS.map((b, i) => {
-                const Icon = b.icon;
-                return (
-                  <div key={b.title} className="glass rounded-2xl p-7 relative overflow-hidden group"
-                    style={{ animation: `visions-rise .7s cubic-bezier(.16,1,.3,1) ${0.08 * i}s both` }}>
-                    <div className="flex items-baseline justify-between mb-8">
-                      <span className="display text-5xl gradient-text num-tab">{String(i + 1).padStart(2, '0')}</span>
-                      <Icon className="w-5 h-5 text-lo" strokeWidth={1.5} />
-                    </div>
-                    <h3 className="text-[16px] font-semibold mb-3 leading-snug">{b.title}</h3>
-                    <p className="text-[13.5px] text-md leading-relaxed">{b.desc}</p>
-                    <div className="mt-6 pt-5 border-t border-line text-[11px] eyebrow flex items-center gap-2">
-                      <CheckCircle className="w-3 h-3 text-emerald-400" /> Tervalidasi
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-
-        {/* CTA */}
-        <section className="py-32 px-6">
-          <div className="max-w-[1100px] mx-auto relative">
-            <div className="aurora" style={{ inset: '-10%', opacity: 0.6 }} />
-            <div className="relative glass rounded-3xl p-12 md:p-16 text-center overflow-hidden">
-              <div className="absolute inset-0 grid-bg pointer-events-none opacity-50" />
-              <div className="relative">
-                <div className="w-14 h-14 rounded-2xl mx-auto mb-6 flex items-center justify-center floaty"
-                  style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))', boxShadow: '0 20px 60px -10px var(--violet)' }}>
-                  <ShieldCheck className="w-7 h-7 text-white" />
-                </div>
-                <h2 className="display text-4xl md:text-6xl mb-4">
-                  Siap <em>memulai</em>?
-                </h2>
-                <p className="text-md text-[16px] max-w-md mx-auto mb-10 leading-relaxed">
-                  Masuk ke dashboard dan mulai pantau pelanggan berisiko—lebih rapi, lebih cepat, dan lebih terukur.
-                </p>
-
-                <a href="/login" onClick={navigateWithLeave('/login')} className={`btn-primary ${isLeaving ? 'opacity-70' : ''}`}>
-                  Masuk ke Login <ArrowUpRight className="w-4 h-4" />
-                </a>
-
-                <div className="mt-10 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-                  {['Role-based access', 'ML model siap pakai', 'Supabase Auth'].map((item) => (
-                    <div key={item} className="flex items-center gap-2 text-[12px] text-md">
-                      <CheckCircle className="w-3.5 h-3.5" style={{ color: 'var(--emerald)' }} strokeWidth={1.5} />
-                      {item}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* FOOTER */}
-        <footer className="px-6 py-12 border-t border-line">
-          <div className="max-w-[1200px] mx-auto grid md:grid-cols-3 gap-8 items-center">
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-lg flex items-center justify-center"
-                style={{ background: 'linear-gradient(135deg, var(--violet), var(--coral))' }}>
-                <ShieldCheck className="w-4 h-4 text-white" />
-              </div>
-              <div>
-                <div className="text-sm font-semibold">Visions</div>
-                <div className="text-[11px] text-lo">Prediksi churn berbasis Machine Learning</div>
-              </div>
-            </div>
-
-            <div className="flex md:justify-center items-center gap-6">
-              {NAV_LINKS.map((n) => (
-                <a key={n.href} href={n.href} className="text-[12px] text-md hover:text-hi transition-colors">
-                  {n.label}
-                </a>
+        <motion.footer
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ ...vpScroll, amount: 0.4 }}
+          variants={fadeIn}
+          className="border-t border-slate-200 bg-white"
+        >
+          <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 px-4 py-8 sm:flex-row sm:px-6 lg:px-8">
+            <motion.div className="flex items-center gap-2" whileHover={reduceMotion ? {} : { scale: 1.02 }}>
+              <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-500/30">
+                <ShieldCheck className="h-4 w-4" strokeWidth={2} />
+              </span>
+              <span className="text-[15px] font-bold text-slate-900">Visions</span>
+            </motion.div>
+            <div className="flex flex-wrap justify-center gap-6 text-[13px] font-medium text-slate-500">
+              {NAV.map(([href, label]) => (
+                <motion.a key={href} href={href} whileHover={{ y: -1 }} className="transition-colors hover:text-blue-600">
+                  {label}
+                </motion.a>
               ))}
             </div>
-
-            <div className="md:text-right">
-              <div className="text-[12px] text-md">
-                Didukung oleh <span className="font-semibold" style={{ color: 'var(--violet)' }}>LapisAI</span>
-              </div>
-              <div className="text-[11px] text-lo mt-1 font-mono">© 2026 — Tim Visions, PNJ</div>
-            </div>
+            <p className="text-[12px] text-slate-400">© 2026 Visions</p>
           </div>
-        </footer>
+        </motion.footer>
       </div>
     </>
   );

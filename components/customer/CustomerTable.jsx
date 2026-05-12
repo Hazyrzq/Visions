@@ -4,20 +4,19 @@ import { useRouter } from 'next/navigation';
 import { Search, Filter, Download, ChevronUp, ChevronDown } from 'lucide-react';
 import RiskBadge from '@/components/dashboard/RiskBadge';
 import ChurnScoreBar from '@/components/dashboard/ChurnScoreBar';
-import { Button } from '@/components/ui/button';
 import { TableSkeleton } from '@/components/ui/Skeleton';
 
 const RISK_OPTIONS = ['Semua Risiko', 'Tinggi', 'Sedang', 'Rendah'];
 const PLAN_OPTIONS = ['Semua Plan', 'Enterprise', 'Professional', 'Starter'];
 
-export default function CustomerTable({ customers, loading }) {
+export default function CustomerTable({ customers, loading, onCustomerOpen }) {
   const router = useRouter();
-  
-  const [search, setSearch] = useState('');
+
+  const [search, setSearch]       = useState('');
   const [riskFilter, setRiskFilter] = useState('Semua Risiko');
   const [planFilter, setPlanFilter] = useState('Semua Plan');
-  const [sortKey, setSortKey] = useState('churn_score');
-  const [sortDir, setSortDir] = useState('desc');
+  const [sortKey, setSortKey]     = useState('churn_score');
+  const [sortDir, setSortDir]     = useState('desc');
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -37,13 +36,15 @@ export default function CustomerTable({ customers, loading }) {
   }, [customers, search, riskFilter, planFilter, sortKey, sortDir]);
 
   const SortIcon = ({ col }) => {
-    if (sortKey !== col) return <ChevronUp className="w-3.5 h-3.5 text-gray-300" />;
-    return sortDir === 'asc' ? <ChevronUp className="w-3.5 h-3.5 text-indigo-500" /> : <ChevronDown className="w-3.5 h-3.5 text-indigo-500" />;
+    if (sortKey !== col) return <ChevronUp className="w-3.5 h-3.5 text-[var(--vs-muted-3)]" />;
+    return sortDir === 'asc'
+      ? <ChevronUp className="w-3.5 h-3.5 text-[var(--vs-brand)]" />
+      : <ChevronDown className="w-3.5 h-3.5 text-[var(--vs-brand)]" />;
   };
 
-  const Th = ({ col, label, className = '' }) => (
+  const Th = ({ col, label }) => (
     <th
-      className={`px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wide cursor-pointer hover:text-gray-800 select-none whitespace-nowrap ${className}`}
+      className="px-4 py-3 text-left text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider cursor-pointer hover:text-[var(--vs-ink)] select-none whitespace-nowrap"
       onClick={() => col && handleSort(col)}
     >
       <div className="flex items-center gap-1">
@@ -57,22 +58,21 @@ export default function CustomerTable({ customers, loading }) {
     <>
       <div className="flex flex-col sm:flex-row gap-3 mb-4">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--vs-muted-3)]" />
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
             placeholder="Cari nama / ID pelanggan…"
-            className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="vs-input pl-9 pr-4 py-2.5"
           />
         </div>
-
         <div className="flex gap-2">
           <div className="relative">
-            <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+            <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--vs-muted-3)] pointer-events-none" />
             <select
               value={riskFilter}
               onChange={e => setRiskFilter(e.target.value)}
-              className="pl-8 pr-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none cursor-pointer"
+              className="vs-input pl-8 pr-3 py-2.5 appearance-none cursor-pointer"
             >
               {RISK_OPTIONS.map(o => <option key={o}>{o}</option>)}
             </select>
@@ -80,62 +80,65 @@ export default function CustomerTable({ customers, loading }) {
           <select
             value={planFilter}
             onChange={e => setPlanFilter(e.target.value)}
-            className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white appearance-none cursor-pointer"
+            className="vs-input px-3 py-2.5 appearance-none cursor-pointer"
           >
             {PLAN_OPTIONS.map(o => <option key={o}>{o}</option>)}
           </select>
-          <Button variant="secondary" className="gap-2 whitespace-nowrap">
+          <button className="vs-btn vs-btn--secondary gap-2 whitespace-nowrap">
             <Download className="w-4 h-4" /> Export
-          </Button>
+          </button>
         </div>
       </div>
 
-      <div className="text-xs text-gray-400 mb-3">{filtered.length} pelanggan ditemukan</div>
+      <div className="text-[12px] text-[var(--vs-muted-2)] mb-3">{filtered.length} pelanggan ditemukan</div>
 
-      <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
+      <div className="vs-card overflow-hidden">
         {loading ? (
           <div className="p-6"><TableSkeleton rows={6} /></div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr>
-                  <Th col="customer_id" label="ID" />
-                  <Th col="company_name" label="Pelanggan" />
-                  <Th col="plan_type" label="Plan" />
-                  <Th col="churn_score" label="Churn Score" />
-                  <Th col="risk_level" label="Risiko" />
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-[var(--vs-bg)] border-b border-[var(--vs-line)]">
+                  <Th col="customer_id"       label="ID" />
+                  <Th col="company_name"      label="Pelanggan" />
+                  <Th col="plan_type"         label="Plan" />
+                  <Th col="churn_score"       label="Churn Score" />
+                  <Th col="risk_level"        label="Risiko" />
                   <Th col="monthly_usage_hrs" label="Usage" />
-                  <Th col="open_tickets" label="Tiket" />
-                  <Th col="nps_latest" label="NPS" />
-                  <Th col="days_since_login" label="Last Login" />
+                  <Th col="open_tickets"      label="Tiket" />
+                  <Th col="nps_latest"        label="NPS" />
+                  <Th col="days_since_login"  label="Last Login" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-50">
+              <tbody className="divide-y divide-[var(--vs-line-soft)]">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-12 text-gray-400 text-sm">Tidak ada data ditemukan</td></tr>
+                  <tr><td colSpan={9} className="text-center py-12 text-[13px] text-[var(--vs-muted-2)]">Tidak ada data ditemukan</td></tr>
                 ) : filtered.map(c => (
                   <tr
                     key={c.id}
-                    onClick={() => router.push(`/dashboard/admin/customer/${c.id}`)}
-                    className="hover:bg-indigo-50/40 cursor-pointer transition-colors"
+                    onClick={() => {
+                      if (onCustomerOpen) onCustomerOpen(c);
+                      else router.replace(`/dashboard/admin/customer?detail=${encodeURIComponent(c.id)}`, { scroll: false });
+                    }}
+                    className="hover:bg-[var(--vs-brand-50)] cursor-pointer transition-colors"
                   >
-                    <td className="px-4 py-3 font-mono text-xs text-gray-500">{c.customer_id}</td>
+                    <td className="px-4 py-3 font-mono text-[12px] text-[var(--vs-muted-2)]">{c.customer_id}</td>
                     <td className="px-4 py-3">
-                      <div className="font-medium text-gray-900">{c.company_name}</div>
-                      <div className="text-[11px] text-gray-400">{c.assigned_name ?? 'Unassigned'}</div>
+                      <div className="text-[13px] font-semibold text-[var(--vs-ink)]">{c.company_name}</div>
+                      <div className="text-[11px] text-[var(--vs-muted-2)]">{c.assigned_name ?? 'Unassigned'}</div>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-lg text-xs font-medium">{c.plan_type}</span>
+                      <span className="vs-tag">{c.plan_type}</span>
                     </td>
                     <td className="px-4 py-3 min-w-[130px]">
                       <ChurnScoreBar score={c.churn_score} />
                     </td>
                     <td className="px-4 py-3"><RiskBadge level={c.risk_level} /></td>
-                    <td className="px-4 py-3 text-gray-700 tabular-nums">{c.monthly_usage_hrs} jam</td>
-                    <td className="px-4 py-3 text-gray-700 tabular-nums">{c.open_tickets}</td>
-                    <td className="px-4 py-3 text-gray-700 tabular-nums">{c.nps_latest}</td>
-                    <td className="px-4 py-3 text-gray-500 text-xs tabular-nums">{c.days_since_login}h lalu</td>
+                    <td className="px-4 py-3 text-[13px] text-[var(--vs-muted)] tabular-nums">{c.monthly_usage_hrs} jam</td>
+                    <td className="px-4 py-3 text-[13px] text-[var(--vs-muted)] tabular-nums">{c.open_tickets}</td>
+                    <td className="px-4 py-3 text-[13px] text-[var(--vs-muted)] tabular-nums">{c.nps_latest}</td>
+                    <td className="px-4 py-3 text-[12px] text-[var(--vs-muted-2)] font-mono tabular-nums">{c.days_since_login}h lalu</td>
                   </tr>
                 ))}
               </tbody>

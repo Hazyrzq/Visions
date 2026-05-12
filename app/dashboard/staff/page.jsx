@@ -1,102 +1,164 @@
 'use client';
+
+import Link from 'next/link';
+import { ArrowRight, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { pageVariants, fadeUp, stagger } from '@/lib/motion';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { AlertTriangle, CheckSquare, Star, ClipboardList } from 'lucide-react';
-import MetricCard from '@/components/dashboard/MetricCard';
+import { mockChurnTrend, mockCustomers, mockStaffPerformance } from '@/lib/mockData';
+import LogipHero from '@/components/dashboard/overview/LogipHero';
+import LogipPerformanceChart from '@/components/dashboard/overview/LogipPerformanceChart';
+import LogipRightColumn from '@/components/dashboard/overview/LogipRightColumn';
 import RiskBadge from '@/components/dashboard/RiskBadge';
 import ChurnScoreBar from '@/components/dashboard/ChurnScoreBar';
-import { mockCustomers, mockActivities, mockStaffPerformance } from '@/lib/mockData';
 
-const actionIcons = { call: '📞', email: '✉️', meeting: '🤝', note: '📝' };
+function riskDot(level) {
+  if (level === 'Tinggi') return 'bg-orange-500';
+  if (level === 'Sedang') return 'bg-sky-500';
+  return 'bg-emerald-500';
+}
 
 export default function StaffOverviewPage() {
   const { profile } = useAuth();
+  const myCustomers = mockCustomers.filter((c) => c.assigned_to === profile?.id);
+  const highPriority = myCustomers.filter((c) => c.risk_level === 'Tinggi');
+  const myPerf = mockStaffPerformance.find((s) => s.id === profile?.id);
 
-  const myCustomers  = mockCustomers.filter(c => c.assigned_to === profile?.id);
-  const highPriority = myCustomers.filter(c => c.risk_level === 'Tinggi');
-  const myActivities = mockActivities.filter(a => a.staff_id === profile?.id);
-  const myPerf       = mockStaffPerformance.find(s => s.id === profile?.id);
+  const stats = [
+    {
+      label: 'Prioritas tinggi',
+      value: String(highPriority.length),
+      hint: 'Perlu tindakan',
+      trend: highPriority.length ? '!' : 'OK',
+      color: highPriority.length ? 'text-red-600' : 'text-emerald-600',
+      bg: highPriority.length ? 'bg-red-50' : 'bg-emerald-50',
+    },
+    {
+      label: 'Selesai (bulan)',
+      value: String(myPerf?.resolved_month ?? 0),
+      hint: 'Tindakan sukses',
+      trend: '+2',
+      color: 'text-[var(--vs-brand)]',
+      bg: 'bg-[var(--vs-brand-50)]',
+    },
+    {
+      label: 'Success rate',
+      value: `${myPerf?.success_rate ?? 0}%`,
+      hint: 'Retensi pelanggan',
+      trend: '+5%',
+      color: 'text-emerald-600',
+      bg: 'bg-emerald-50',
+    },
+  ];
+
+  const donePct = myCustomers.length
+    ? Math.round(((myCustomers.length - highPriority.length) / myCustomers.length) * 100)
+    : 100;
 
   return (
-    <div className="space-y-6 max-w-[1200px]">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">
-          Selamat datang, {profile?.full_name?.split(' ')[0]} 👋
-        </h2>
-        <p className="text-sm text-gray-400 mt-0.5">Berikut ringkasan tugas dan aktivitas Anda hari ini</p>
-      </div>
+    <motion.div
+      variants={pageVariants}
+      initial="hidden"
+      animate="visible"
+      className="grid gap-10 xl:grid-cols-12 xl:items-start xl:gap-12"
+    >
+      <div className="space-y-10 xl:col-span-8">
+        <LogipHero
+          eyebrow="Staf"
+          subtitle="Fokus ke pelanggan Anda: prioritas, performa, dan aktivitas terbaru."
+        />
 
-      {/* Metric Cards */}
-      <div className="grid grid-cols-3 gap-4">
-        <MetricCard title="Tugas Prioritas"    value={highPriority.length}              subtitle="pelanggan high risk"   icon={AlertTriangle} color="red"     />
-        <MetricCard title="Selesai Minggu Ini" value={myPerf?.resolved_month ?? 0}      subtitle="tindakan berhasil"     icon={CheckSquare}   color="emerald" />
-        <MetricCard title="Success Rate"       value={`${myPerf?.success_rate ?? 0}%`}  subtitle="retensi bulan ini"     icon={Star}          color="indigo"  />
-      </div>
+        <motion.div variants={stagger} className="grid gap-4 sm:grid-cols-3">
+          {stats.map((s) => (
+            <motion.div
+              key={s.label}
+              variants={fadeUp}
+              className="rounded-[22px] border border-slate-200/90 bg-white p-5 shadow-sm transition-transform hover:-translate-y-0.5"
+            >
+              <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">{s.label}</p>
+              <div className="mt-3 flex items-end justify-between gap-2">
+                <span className={`text-[2rem] font-bold tabular-nums leading-none tracking-tight sm:text-[2.25rem] ${s.color}`}>
+                  {s.value}
+                </span>
+                <span className={`mb-1 rounded-lg px-2 py-0.5 text-[11px] font-bold ${s.bg} ${s.color}`}>{s.trend}</span>
+              </div>
+              <p className="mt-2 text-[12px] font-medium text-slate-500">{s.hint}</p>
+            </motion.div>
+          ))}
+        </motion.div>
 
-      <div className="grid xl:grid-cols-5 gap-5">
-        {/* Priority List */}
-        <div className="xl:col-span-3 bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-50">
-            <h3 className="font-semibold text-gray-900">Prioritas Hari Ini</h3>
-            <p className="text-xs text-gray-400 mt-0.5">Pelanggan yang perlu tindakan segera</p>
+        <LogipPerformanceChart data={mockChurnTrend} />
+
+        <motion.div variants={fadeUp} className="rounded-[24px] border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
+          <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Prioritas Anda</h2>
+              <p className="mt-1 text-[13px] text-slate-500">Pelanggan yang di-assign — risiko tinggi dulu.</p>
+            </div>
+            <div className="flex flex-wrap items-center gap-3">
+              <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-600">
+                Selesai <span className="text-slate-900">{donePct}%</span>
+              </div>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm"
+              >
+                Minggu ini <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+              </button>
+            </div>
           </div>
+
           {highPriority.length === 0 ? (
-            <div className="py-16 text-center text-gray-400 text-sm">
-              <CheckSquare className="w-10 h-10 mx-auto mb-3 text-emerald-300" />
-              Tidak ada pelanggan prioritas hari ini
-            </div>
+            <p className="py-10 text-center text-[13px] text-slate-500">Tidak ada prioritas tinggi — kerja bagus.</p>
           ) : (
-            <div className="divide-y divide-gray-50">
-              {highPriority.map(c => (
-                <div key={c.id} className="px-5 py-4 hover:bg-gray-50/50 transition-colors">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="font-semibold text-gray-900 text-sm">{c.company_name}</div>
-                      <div className="text-xs text-gray-400 mt-0.5">{c.customer_id} · {c.plan_type}</div>
+            <ul className="divide-y divide-slate-100">
+              {highPriority.map((c) => (
+                <li key={c.id}>
+                  <Link href="/dashboard/staff/customer" className="block py-4 transition-colors hover:bg-slate-50/80">
+                    <div className="flex items-start gap-4 sm:gap-5">
+                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[11px] font-bold uppercase text-slate-600">
+                        {(c.company_name || '?').slice(0, 2)}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[14px] font-semibold text-slate-900">{c.company_name}</p>
+                          <RiskBadge level={c.risk_level} />
+                        </div>
+                        <p className="mt-0.5 text-[12px] text-slate-500">{c.customer_id} · {c.plan_type}</p>
+                        <div className="mt-3 max-w-md">
+                          <ChurnScoreBar score={c.churn_score} />
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2 pt-1">
+                        <span className={`h-2.5 w-2.5 rounded-full ${riskDot(c.risk_level)}`} />
+                        <span className="text-[13px] font-bold tabular-nums text-slate-800">{c.churn_score}</span>
+                        <MoreHorizontal className="h-5 w-5 text-slate-300" />
+                      </div>
                     </div>
-                    <RiskBadge level={c.risk_level} />
-                  </div>
-                  <div className="mt-2.5">
-                    <ChurnScoreBar score={c.churn_score} />
-                  </div>
-                  {c.rekomendasi && (
-                    <div className="mt-2.5 text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2 leading-relaxed">
-                      💡 {c.rekomendasi}
-                    </div>
-                  )}
-                </div>
+                  </Link>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
-        </div>
 
-        {/* Activity Log */}
-        <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100">
-          <div className="px-5 py-4 border-b border-gray-50">
-            <h3 className="font-semibold text-gray-900">Log Aktivitas Saya</h3>
+          <div className="mt-4 border-t border-slate-100 pt-4 text-center">
+            <Link
+              href="/dashboard/staff/customer"
+              className="inline-flex items-center gap-2 text-[13px] font-semibold text-[var(--vs-brand)] hover:underline"
+            >
+              Buka pelanggan saya <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
-          <div className="divide-y divide-gray-50">
-            {myActivities.length === 0 ? (
-              <div className="py-10 text-center text-gray-400 text-sm">
-                <ClipboardList className="w-8 h-8 mx-auto mb-2 text-gray-200" />
-                Belum ada aktivitas
-              </div>
-            ) : myActivities.map(a => (
-              <div key={a.id} className="px-5 py-3.5">
-                <div className="flex items-start gap-2.5">
-                  <span className="text-base flex-shrink-0">{actionIcons[a.action_type] ?? '📌'}</span>
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-gray-800">{a.company_name}</div>
-                    <div className="text-xs text-gray-500 mt-0.5 leading-relaxed">{a.description}</div>
-                    <div className="text-[11px] text-gray-300 mt-1">
-                      {new Date(a.created_at).toLocaleDateString('id-ID', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+        </motion.div>
       </div>
-    </div>
+
+      <div className="xl:col-span-4">
+        <LogipRightColumn
+          activityFilterStaffId={profile?.id}
+          customerHref="/dashboard/staff/customer"
+          showAlerts={false}
+        />
+      </div>
+    </motion.div>
   );
 }

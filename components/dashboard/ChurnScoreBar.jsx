@@ -1,17 +1,17 @@
 function getColor(s) {
-  if (s > 65) return { bar: 'bg-red-500',     text: 'text-red-600' };
-  if (s > 30) return { bar: 'bg-amber-500',   text: 'text-amber-600' };
-  return        { bar: 'bg-emerald-500', text: 'text-emerald-600' };
+  if (s > 65) return { bar: 'var(--vs-danger)',   text: 'var(--vs-danger)' };
+  if (s > 30) return { bar: 'var(--vs-warn)',     text: 'var(--vs-warn)' };
+  return        { bar: 'var(--vs-success)', text: 'var(--vs-success)' };
 }
 
 export default function ChurnScoreBar({ score }) {
   const { bar, text } = getColor(score);
   return (
     <div className="flex items-center gap-2">
-      <div className="flex-1 bg-gray-100 rounded-full h-1.5 overflow-hidden min-w-[64px]">
-        <div className={`h-full rounded-full ${bar}`} style={{ width: `${score}%` }} />
+      <div className="flex-1 bg-[var(--vs-line-soft)] rounded-full h-1.5 overflow-hidden min-w-[64px]">
+        <div className="h-full rounded-full" style={{ width: `${score}%`, background: bar }} />
       </div>
-      <span className={`text-xs font-bold w-6 text-right tabular-nums ${text}`}>{score}</span>
+      <span className="text-[12px] font-bold w-6 text-right tabular-nums" style={{ color: text }}>{score}</span>
     </div>
   );
 }
