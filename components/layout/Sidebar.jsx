@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   LayoutDashboard,
   Users,
@@ -25,7 +25,7 @@ const adminNav = [
   { href: '/dashboard/admin', icon: LayoutDashboard, label: 'Overview' },
   { href: '/dashboard/admin/customer', icon: Users, label: 'Customer' },
   { href: '/dashboard/admin/staf-view', icon: UserCheck, label: 'Staf View' },
-  { href: '/dashboard/admin/data', icon: Database, label: 'Data & model' },
+  { href: '/dashboard/admin/data', icon: Database, label: 'Data & Model' },
   { href: '/dashboard/admin/user-management', icon: Settings, label: 'Pengguna' },
   { href: '/dashboard/admin/report', icon: BarChart2, label: 'Report' },
 ];
@@ -38,8 +38,13 @@ const staffNav = [
 
 export default function Sidebar({ mobileOpen, onMobileClose }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const { profile, logout } = useAuth();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const nav = profile?.role === 'admin' ? adminNav : staffNav;
   const base = profile?.role === 'admin' ? '/dashboard/admin' : '/dashboard/staff';
@@ -50,201 +55,143 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
     return exactPaths.includes(href) ? pathname === href : pathname.startsWith(href);
   };
 
-  const Inner = ({ narrow, onMobileClose, onToggleCollapse }) => (
-    <div
-      className="flex h-full flex-col border-r border-[var(--vs-sidebar-rail-border)] bg-[var(--vs-sidebar-rail-bg)]"
-    >
-      {/* Brand + toggle (toggle hanya desktop) */}
-      <div className={narrow ? 'flex flex-col items-center border-b border-[var(--vs-sidebar-rail-border)] px-2 pb-3 pt-5' : 'border-b border-[var(--vs-sidebar-rail-border)] px-4 pb-3 pt-6'}>
-        {narrow ? (
-          <>
-            <Link
-              href={base}
-              onClick={onMobileClose}
-              className="flex flex-col items-center rounded-2xl outline-none ring-offset-2 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--vs-brand)]"
-            >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--vs-brand)] text-white shadow-lg shadow-blue-500/30">
-                <ShieldCheck className="h-[22px] w-[22px]" strokeWidth={2} aria-hidden />
-              </div>
-            </Link>
-            {onToggleCollapse ? (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                className="mt-3 flex h-8 w-8 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 shadow-sm transition-colors hover:border-[var(--vs-brand-200)] hover:text-[var(--vs-brand)]"
-                aria-label="Perluas sidebar"
-              >
-                <ChevronRight className="h-3.5 w-3.5" />
-              </button>
-            ) : null}
-          </>
-        ) : (
-          <div className="flex items-center gap-2">
-            <Link
-              href={base}
-              onClick={onMobileClose}
-              className="flex min-w-0 flex-1 items-center gap-3 rounded-2xl outline-none ring-offset-2 transition-opacity hover:opacity-90 focus-visible:ring-2 focus-visible:ring-[var(--vs-brand)]"
-            >
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--vs-brand)] text-white shadow-lg shadow-blue-500/30">
-                <ShieldCheck className="h-[22px] w-[22px]" strokeWidth={2} aria-hidden />
-              </div>
-              <AnimatePresence>
-                <motion.div
-                  initial={{ opacity: 0, width: 0 }}
-                  animate={{ opacity: 1, width: 'auto' }}
-                  exit={{ opacity: 0, width: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="min-w-0 overflow-hidden leading-none"
-                >
-                  <span className="block text-[22px] font-bold tracking-tight text-[var(--vs-sidebar-ink)]">
-                    Visions
-                  </span>
-                  <span className="mt-1 block text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
-                    ChurnShield
-                  </span>
-                </motion.div>
-              </AnimatePresence>
-            </Link>
-            {onToggleCollapse ? (
-              <button
-                type="button"
-                onClick={onToggleCollapse}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200/90 bg-white text-slate-500 shadow-sm transition-colors hover:border-[var(--vs-brand-200)] hover:text-[var(--vs-brand)]"
-                aria-label="Ciutkan sidebar"
-              >
-                <ChevronLeft className="h-3.5 w-3.5" />
-              </button>
-            ) : null}
+  if (!mounted) return null;
+
+  const renderContent = (isCollapsed, isMobile) => (
+    <div className="flex h-full flex-col bg-white/95 backdrop-blur-md border-r border-slate-200">
+      {/* header & logo */}
+      <div className="relative flex items-center p-4 min-h-[76px] border-b border-slate-100">
+        <Link
+          href={base}
+          onClick={isMobile ? onMobileClose : undefined}
+          className={`flex items-center gap-3 overflow-hidden transition-opacity hover:opacity-80 w-full ${
+            isCollapsed && !isMobile ? 'justify-center' : 'justify-start'
+          }`}
+        >
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-600 text-white shadow-sm shadow-blue-600/20">
+            <ShieldCheck className="h-5 w-5" strokeWidth={2} />
           </div>
+          <AnimatePresence>
+            {(!isCollapsed || isMobile) && (
+              <motion.div
+                initial={{ opacity: 0, x: -5 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -5 }}
+                transition={{ duration: 0.2 }}
+                className="whitespace-nowrap"
+              >
+                <span className="block text-[16px] font-bold text-slate-800 tracking-tight">
+                  Visions
+                </span>
+                <span className="block text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                  ChurnShield
+                </span>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </Link>
+
+        {/* tombol toggle dikembalikan ke posisi stabil */}
+        {!isMobile && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(!collapsed)}
+            className="absolute -right-3 top-6 z-50 flex h-6 w-6 items-center justify-center rounded-full bg-white border border-slate-200 text-slate-500 shadow-sm transition-colors hover:border-blue-400 hover:text-blue-600"
+          >
+            {isCollapsed ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+          </button>
         )}
       </div>
 
-      {/* Nav — aktif: ikon dalam kotak biru, label tebal */}
-      <nav className={`min-h-0 flex-1 space-y-0.5 overflow-y-auto sidebar-scroll-light ${narrow ? 'px-2 pb-2' : 'px-3 pb-2'}`}>
-        {nav.map(({ href, icon: Icon, label }, i) => {
+      {/* navigasi menu */}
+      <nav className="flex-1 space-y-1 overflow-y-auto p-3 scrollbar-hide">
+        {nav.map(({ href, icon: Icon, label }) => {
           const active = isActive(href);
           return (
-            <motion.div
+            <Link
               key={href}
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: i * 0.04, duration: 0.22 }}
+              href={href}
+              onClick={isMobile ? onMobileClose : undefined}
+              title={isCollapsed ? label : undefined}
+              className={`group relative flex items-center rounded-lg transition-colors duration-200 ${
+                isCollapsed && !isMobile ? 'justify-center p-2.5' : 'gap-3 px-3 py-2.5'
+              } ${
+                active
+                  ? 'bg-blue-50 text-blue-600'
+                  : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+              }`}
             >
-              <Link
-                href={href}
-                onClick={onMobileClose}
-                title={narrow ? label : undefined}
-                className={`group flex items-center rounded-2xl transition-colors duration-200 ${
-                  narrow ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2'
-                } ${
-                  active
-                    ? 'bg-white text-[var(--vs-brand)] shadow-sm shadow-slate-900/5'
-                    : 'text-slate-500 hover:bg-white/70 hover:text-slate-900'
-                }`}
-              >
-                <span
-                  className={`flex shrink-0 items-center justify-center transition-all duration-200 ${
-                    narrow ? 'h-10 w-10' : 'h-10 w-10'
-                  } ${
-                    active
-                      ? 'rounded-xl bg-[var(--vs-brand)] text-white shadow-md shadow-blue-500/25'
-                      : 'rounded-xl bg-transparent text-slate-400 group-hover:bg-slate-200/60 group-hover:text-slate-700'
-                  }`}
-                >
-                  <Icon className="h-[19px] w-[19px]" strokeWidth={active ? 2.25 : 2} />
-                </span>
-                <AnimatePresence>
-                  {!narrow && (
-                    <motion.span
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      transition={{ duration: 0.18 }}
-                      className={`truncate text-[14px] ${active ? 'font-bold' : 'font-medium'}`}
-                    >
-                      {label}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Link>
-            </motion.div>
+              {/* garis indikator aktif pakai div biasa, bukan framer motion biar ga bug */}
+              {active && !isCollapsed && !isMobile && (
+                <div className="absolute left-0 top-1/2 h-3/5 w-1 -translate-y-1/2 rounded-r-full bg-blue-600" />
+              )}
+              
+              <Icon 
+                className={`shrink-0 transition-colors ${isCollapsed && !isMobile ? 'h-5 w-5' : 'h-[18px] w-[18px]'}`} 
+                strokeWidth={active ? 2.5 : 2} 
+              />
+              
+              <AnimatePresence>
+                {(!isCollapsed || isMobile) && (
+                  <motion.span
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className={`truncate text-[13px] ${active ? 'font-semibold' : 'font-medium'}`}
+                  >
+                    {label}
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </Link>
           );
         })}
       </nav>
 
-      {/* Footer: bantuan + keluar + chip user */}
-      <div className={`mt-auto border-t border-[var(--vs-sidebar-rail-border)] ${narrow ? 'px-2 py-3' : 'px-3 py-4'}`}>
-        {!narrow ? (
-          <Link
-            href={helpHref}
-            onClick={onMobileClose}
-            className="mb-2 flex items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium text-slate-500 transition-colors hover:bg-white/80 hover:text-slate-900"
-          >
-            <CircleHelp className="h-[18px] w-[18px] shrink-0 text-slate-400" />
-            {profile?.role === 'admin' ? 'Bantuan & data' : 'Bantuan & laporan'}
-          </Link>
-        ) : (
-          <Link
-            href={helpHref}
-            onClick={onMobileClose}
-            title="Bantuan"
-            className="mb-2 flex justify-center rounded-2xl py-2 text-slate-500 hover:bg-white/80 hover:text-slate-900"
-          >
-            <CircleHelp className="h-[18px] w-[18px]" />
-          </Link>
-        )}
+      {/* area footer */}
+      <div className="border-t border-slate-100 p-3 space-y-2 bg-slate-50/50">
 
-        {narrow && profile && (
-          <ProfileHoverCard placement="right">
-            <button
-              type="button"
-              title="Profil"
-              className="mb-2 flex w-full justify-center rounded-2xl py-2 text-slate-500 transition-colors hover:bg-white/80 hover:text-slate-900"
-            >
-              <UserCircle className="h-[18px] w-[18px]" />
-            </button>
-          </ProfileHoverCard>
-        )}
-
-        <AnimatePresence>
-          {!narrow && profile && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="mb-3">
-              <ProfileHoverCard placement="right">
-                <div className="flex w-full cursor-default items-center gap-3 rounded-2xl border border-white/60 bg-white/50 px-3 py-2.5 outline-none ring-offset-2 transition-colors hover:border-[var(--vs-brand-200)] hover:bg-white/90 focus-within:ring-2 focus-within:ring-[var(--vs-brand)]">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--vs-brand)] to-blue-500 text-[11px] font-bold text-white shadow-sm">
+        {profile && (
+          <ProfileHoverCard placement="right" minimal={true}>
+            <div className={`group flex items-center rounded-lg transition-all cursor-pointer hover:bg-white hover:shadow-sm border border-transparent hover:border-slate-200 ${
+              isCollapsed && !isMobile ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'
+            }`}>
+              {isCollapsed && !isMobile ? (
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-50 text-[12px] font-bold text-blue-700 ring-2 ring-white shadow-sm">
+                  {profile.full_name?.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() ?? '?'}
+                </div>
+              ) : (
+                <>
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-50 text-[12px] font-bold text-blue-700 ring-2 ring-white shadow-sm">
                     {profile.full_name?.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() ?? '?'}
                   </div>
                   <div className="min-w-0 flex-1 text-left">
-                    <div className="truncate text-[13px] font-semibold text-[var(--vs-sidebar-ink)]">{profile.full_name}</div>
+                    <div className="truncate text-[13px] font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">{profile.full_name}</div>
                     <div className="truncate text-[11px] font-medium capitalize text-slate-500">{profile.role}</div>
                   </div>
-                </div>
-              </ProfileHoverCard>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </>
+              )}
+            </div>
+          </ProfileHoverCard>
+        )}
 
         <button
           type="button"
           onClick={logout}
-          className={`flex w-full items-center rounded-2xl text-[13px] font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 ${
-            narrow ? 'justify-center px-2 py-2' : 'gap-3 px-3 py-2.5'
+          title={isCollapsed ? "Keluar" : undefined}
+          className={`flex w-full items-center rounded-lg text-[13px] font-medium text-slate-500 transition-colors hover:bg-red-50 hover:text-red-600 ${
+            isCollapsed && !isMobile ? 'justify-center p-2.5' : 'gap-3 px-3 py-2'
           }`}
         >
-          <span
-            className={`flex shrink-0 items-center justify-center rounded-xl bg-white/80 text-slate-400 shadow-sm ${
-              narrow ? 'h-10 w-10' : 'h-10 w-10'
-            }`}
-          >
-            <LogOut className="h-[18px] w-[18px]" />
-          </span>
+          <LogOut className={`shrink-0 ${isCollapsed && !isMobile ? 'h-5 w-5' : 'h-[18px] w-[18px]'}`} />
           <AnimatePresence>
-            {!narrow && (
+            {(!isCollapsed || isMobile) && (
               <motion.span
                 initial={{ opacity: 0, width: 0 }}
                 animate={{ opacity: 1, width: 'auto' }}
                 exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.18 }}
+                transition={{ duration: 0.2 }}
                 className="overflow-hidden whitespace-nowrap"
               >
                 Keluar
@@ -259,11 +206,11 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
   return (
     <>
       <aside
-        className={`relative z-30 hidden h-full shrink-0 flex-col transition-[width] duration-300 ease-out md:flex ${
-          collapsed ? 'w-[76px]' : 'w-[272px]'
+        className={`relative z-30 hidden h-full shrink-0 flex-col transition-[width] duration-300 ease-in-out md:flex ${
+          collapsed ? 'w-[72px]' : 'w-[240px]'
         }`}
       >
-        <Inner narrow={collapsed} onToggleCollapse={() => setCollapsed((v) => !v)} />
+        {renderContent(collapsed, false)}
       </aside>
 
       <AnimatePresence>
@@ -276,13 +223,13 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
           >
             <div className="absolute inset-0 bg-slate-900/35 backdrop-blur-[2px]" onClick={onMobileClose} />
             <motion.aside
-              initial={{ x: -300 }}
+              initial={{ x: '-100%' }}
               animate={{ x: 0 }}
-              exit={{ x: -300 }}
-              transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
-              className="relative h-full w-[288px] max-w-[88vw] shadow-2xl"
+              exit={{ x: '-100%' }}
+              transition={{ duration: 0.3, ease: 'easeInOut' }}
+              className="relative h-full w-[260px] max-w-[85vw] shadow-2xl"
             >
-              <Inner narrow={false} onMobileClose={onMobileClose} />
+              {renderContent(false, true)}
             </motion.aside>
           </motion.div>
         )}

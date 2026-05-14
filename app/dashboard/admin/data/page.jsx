@@ -1,215 +1,452 @@
 'use client';
 
-import { useState } from 'react';
-import { Upload, Play, CheckCircle, BarChart2, Database, Settings2 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+import { Upload, Play, CheckCircle, Database, PieChart, Users, AlertTriangle, Eye, X, Clock, User, Filter } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { fadeUp, stagger } from '@/lib/motion';
-import { mockModelHistory, mockFeatureImportance } from '@/lib/mockData';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
 import DashboardShell from '@/components/dashboard/DashboardShell';
+import Papa from 'papaparse';
+import { createClient } from '@supabase/supabase-js'; 
+import { useAuth } from '@/lib/hooks/useAuth';
+
+// pindahin koneksi database ke luar komponen agar tidak terputus saat pindah tab
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function AdminDataPage() {
+  const { profile } = useAuth();
   const { toasts, toast, remove } = useToast();
-  const [customerFile, setCustomerFile] = useState(null);
-  const [ticketFile, setTicketFile]     = useState(null);
-  const [smote, setSmote]               = useState(true);
-  const [featureEng, setFeatureEng]     = useState(true);
-  const [hyperParam, setHyperParam]     = useState(false);
-  const [training, setTraining]         = useState(false);
-  const [progress, setProgress]         = useState(0);
+  
+  const [modelHistory, setModelHistory] = useState([]);
+  const [selectedHistory, setSelectedHistory] = useState(null);
+  const [historyDetails, setHistoryDetails] = useState([]);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const [latestPredictions, setLatestPredictions] = useState([]);
+  const [batchSummary, setBatchSummary] = useState(null);
+  const [filterRisk, setFilterRisk] = useState('All'); 
 
-  const handleTrain = async () => {
-    if (!customerFile) { toast('Upload customers_dataset.csv terlebih dahulu', 'warning'); return; }
-    setTraining(true); setProgress(0);
-    for (let i = 0; i <= 100; i += 10) {
-      await new Promise(r => setTimeout(r, 300));
-      setProgress(i);
-    }
-    setTraining(false);
-    toast('Training selesai! Model baru berhasil disimpan', 'success');
+  // tambahin state khusus buat nunggu data pas pindah tab
+  const [isLoadingData, setIsLoadingData] = useState(true);
+
+  const [files, setFiles] = useState({
+    accounts: null, usage: null, billing: null, tickets: null, nps: null
+  });
+
+  const [training, setTraining] = useState(false);
+  const [progress, setProgress] = useState(0);
+
+  const fetchAllHistory = async () => {
+    const { data: models, error } = await supabase
+      .from('model_history')
+      .select('*')
+      .order('id', { ascending: false });
+    
+    if (!error && models) setModelHistory(models);
   };
 
-  const statusBadge = (s) =>
-    s === 'Aktif'
-      ? <span className="vs-tag vs-tag--low">Aktif</span>
-      : <span className="vs-tag" style={{ background: 'var(--vs-bg-2)', color: 'var(--vs-muted)', borderColor: 'var(--vs-line)' }}>Tidak Aktif</span>;
+  const fetchLatestResults = async () => {
+    const { data: latestBatch } = await supabase
+      .from('model_history')
+      .select('id, tanggal')
+      .order('id', { ascending: false })
+      .limit(1)
+      .single();
 
-  const maxImportance = Math.max(...mockFeatureImportance.map(f => f.importance_score));
+    if (latestBatch) {
+      const { data: preds } = await supabase
+        .from('prediction_history')
+        .select('customer_id, company_name, churn_score, risk_level')
+        .eq('model_history_id', latestBatch.id)
+        .order('churn_score', { ascending: false });
+
+      if (preds) {
+        setLatestPredictions(preds.slice(0, 5));
+        setBatchSummary({
+          total: preds.length,
+          high: preds.filter(p => p.risk_level === 'Tinggi').length,
+          medium: preds.filter(p => p.risk_level === 'Sedang').length,
+          low: preds.filter(p => p.risk_level === 'Rendah').length,
+          tanggal: latestBatch.tanggal
+        });
+      }
+    }
+  };
+
+  // gabungin proses fetch biar jalan barengan pas halaman dibuka
+  useEffect(() => {
+    const loadAll = async () => {
+      setIsLoadingData(true);
+      await fetchAllHistory();
+      await fetchLatestResults();
+      setIsLoadingData(false);
+    };
+    loadAll();
+  }, []);
+
+  const handleViewHistoryDetail = async (history, displayIndex) => {
+    setSelectedHistory({ ...history, displayIndex });
+    setHistoryDetails([]);
+    setFilterRisk('All'); 
+    setLoadingDetail(true);
+    
+    const { data: details, error } = await supabase
+      .from('prediction_history')
+      .select('customer_id, company_name, churn_score, risk_level')
+      .eq('model_history_id', history.id)
+      .order('churn_score', { ascending: false });
+
+    if (!error && details) setHistoryDetails(details);
+    setLoadingDetail(false);
+  };
+
+  const handleFileChange = (key, file) => {
+    setFiles(prev => ({ ...prev, [key]: file }));
+  };
+
+  const handlePredict = async () => {
+    if (!files.accounts || !files.usage || !files.billing || !files.tickets || !files.nps) {
+      toast('Mohon Upload Kelima File CSV Terlebih Dahulu', 'warning');
+      return;
+    }
+
+    setTraining(true);
+    setProgress(10);
+
+    try {
+      const formData = new FormData();
+      formData.append('file_accounts', files.accounts);
+      formData.append('file_usage', files.usage);
+      formData.append('file_billing', files.billing);
+      formData.append('file_tickets', files.tickets);
+      formData.append('file_nps', files.nps);
+
+      const response = await fetch('http://basic-8.alstore.space:23998/predict-batch', {
+        method: 'POST', body: formData
+      });
+
+      if (!response.ok) throw new Error('Gagal Memproses Data di Server AI');
+
+      const csvText = await response.text();
+
+      Papa.parse(csvText, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          const data = results.data;
+          
+          const { data: historyInsert, error: historyError } = await supabase
+            .from('model_history')
+            .insert([{
+              tanggal: new Date().toISOString(),
+              algoritma: 'LightGBM Classifier', 
+              status: 'Aktif',
+              processed_by: profile?.full_name || 'Admin System'
+            }])
+            .select('id').single();
+
+          if (historyError) throw historyError;
+          const newHistoryId = historyInsert.id;
+
+          const mappedData = data.map(row => {
+            let riskId = 'Rendah';
+            let prio = 3;
+            if (row.risk_level === 'High') { riskId = 'Tinggi'; prio = 1; }
+            else if (row.risk_level === 'Medium') { riskId = 'Sedang'; prio = 2; }
+
+            return {
+              customer_id: row.customer_id,
+              company_name: `PT Pelanggan ${row.customer_id.split('-')[1] || row.customer_id}`, 
+              plan_type: row.plan_type,
+              contract_type: row.contract_type,
+              customer_type: row.customer_type,
+              tenure_months: parseFloat(row.tenure_months) || 0,
+              total_payment_value: parseFloat(row.total_payment_value) || 0,
+              mrr: parseFloat(row.mrr) || 0,
+              total_dunning: parseInt(row.total_dunning) || 0,
+              avg_payment_delay: parseFloat(row.avg_payment_delay) || 0,
+              days_since_login: parseInt(row.days_since_login) || 0,
+              avg_nps_score: parseFloat(row.avg_nps_score) || 0,
+              total_tickets: parseInt(row.total_tickets) || 0,
+              avg_severity: parseFloat(row.avg_severity) || 0,
+              severe_ticket_ratio: parseFloat(row.severe_ticket_ratio) || 0,
+              avg_usage_hrs: parseFloat(row.avg_usage_hrs) || 0,
+              usage_per_user: parseFloat(row.usage_per_user) || 0,
+              avg_feature_adoption: parseFloat(row.avg_feature_adoption) || 0,
+              churn_actual: row.churn === '1',
+              churn_score: parseFloat(row.churn_score) || 0,
+              risk_level: riskId,
+              prioritas: prio
+            };
+          });
+
+          await supabase.from('customers').upsert(mappedData, { onConflict: 'customer_id' });
+
+          const historyMappedData = mappedData.map(item => ({
+            ...item, 
+            model_history_id: newHistoryId,
+            processed_by: profile?.full_name || 'Admin System'
+          }));
+
+          await supabase.from('prediction_history').insert(historyMappedData);
+          
+          toast(`Sukses! ${data.length} Pelanggan Berhasil Diproses`, 'success');
+          await fetchAllHistory();
+          await fetchLatestResults();
+          setTraining(false);
+        }
+      });
+    } catch (error) {
+      setTraining(false);
+      toast(error.message, 'error');
+    }
+  };
+
+  const fileInputsConfig = [
+    { label: 'Customer Accounts', key: 'accounts', desc: 'Data Profil Pelanggan' },
+    { label: 'Monthly Usage', key: 'usage', desc: 'Durasi Penggunaan App' },
+    { label: 'Billing Data', key: 'billing', desc: 'Riwayat Tagihan & Dunning' },
+    { label: 'Support Tickets', key: 'tickets', desc: 'Data Komplain / Severity' },
+    { label: 'NPS Surveys', key: 'nps', desc: 'Skor Kepuasan Pelanggan' },
+  ];
+
+  const formatDateTime = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    return d.toLocaleString('id-ID', { 
+      day: '2-digit', month: 'short', year: 'numeric', 
+      hour: '2-digit', minute: '2-digit' 
+    });
+  };
+
+  const filteredDetails = filterRisk === 'All' 
+    ? historyDetails 
+    : historyDetails.filter(d => d.risk_level === filterRisk);
 
   return (
     <DashboardShell
-      title="Data & model ML"
-      description="Kelola dataset, rekayasa fitur, dan latih model prediksi churn."
+      title="Data & Model ML"
+      description="Kelola Dataset Dan Pantau Riwayat Prediksi Log Aktivitas Admin Secara Transparan."
       icon={Database}
     >
-
       <motion.div variants={stagger} className="grid xl:grid-cols-3 gap-5">
-
         <div className="xl:col-span-2 space-y-5">
-
-          {/* Upload Dataset */}
+          {/* box upload */}
           <motion.div variants={fadeUp} className="vs-card p-6">
             <h3 className="text-[14px] font-bold text-[var(--vs-ink)] flex items-center gap-2 mb-5">
-              <Upload className="w-4 h-4 text-[var(--vs-muted-2)]" /> Upload Dataset
+              <Upload className="w-4 h-4 text-[var(--vs-muted-2)]" /> Upload 5 Dataset Mentah
             </h3>
-            <div className="grid sm:grid-cols-2 gap-4">
-              {[
-                { label: 'customers_dataset.csv', desc: 'Data profil & perilaku', key: 'customer', file: customerFile, set: setCustomerFile },
-                { label: 'tickets_dataset.csv',   desc: 'Data tiket & keluhan',   key: 'ticket',   file: ticketFile,   set: setTicketFile },
-              ].map(f => (
-                <label key={f.key} className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--vs-line)] bg-[var(--vs-bg)] hover:bg-[var(--vs-surface)] hover:border-[var(--vs-brand-200)] rounded-xl p-6 cursor-pointer transition-all group">
-                  <input type="file" accept=".csv" className="hidden" onChange={e => f.set(e.target.files[0])} />
-                  {f.file ? (
+            <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-4">
+              {fileInputsConfig.map(f => (
+                <label key={f.key} className="flex flex-col items-center justify-center border-2 border-dashed border-[var(--vs-line)] bg-[var(--vs-bg)] hover:bg-[var(--vs-surface)] hover:border-[var(--vs-brand-200)] rounded-xl p-4 cursor-pointer transition-all group">
+                  <input type="file" accept=".csv" className="hidden" onChange={e => handleFileChange(f.key, e.target.files[0])} />
+                  {files[f.key] ? (
                     <div className="text-center">
-                      <CheckCircle className="w-7 h-7 text-[var(--vs-success)] mx-auto mb-2" />
-                      <div className="text-[13px] font-semibold text-[var(--vs-ink)]">{f.file.name}</div>
-                      <div className="text-[11px] text-[var(--vs-muted-2)] mt-1 font-mono">{(f.file.size / 1024).toFixed(1)} KB</div>
+                      <CheckCircle className="w-6 h-6 text-[var(--vs-success)] mx-auto mb-2" />
+                      <div className="text-[12px] font-semibold text-[var(--vs-ink)] truncate w-32">{files[f.key].name}</div>
                     </div>
                   ) : (
                     <div className="text-center">
-                      <div className="w-8 h-8 rounded-full bg-[var(--vs-surface)] border border-[var(--vs-line)] flex items-center justify-center mx-auto mb-3 group-hover:border-[var(--vs-brand)] transition-colors">
-                        <Upload className="w-3.5 h-3.5 text-[var(--vs-muted-2)]" />
-                      </div>
-                      <div className="text-[13px] font-semibold text-[var(--vs-ink)]">{f.label}</div>
-                      <div className="text-[12px] text-[var(--vs-muted-2)] mt-0.5">{f.desc}</div>
+                      <Upload className="w-5 h-5 text-[var(--vs-muted-2)] mx-auto mb-2" />
+                      <div className="text-[12px] font-semibold text-[var(--vs-ink)]">{f.label}</div>
                     </div>
                   )}
                 </label>
               ))}
             </div>
+            <button className="vs-btn vs-btn--primary w-full mt-5 justify-center" disabled={training} onClick={handlePredict}>
+              <Play className="w-4 h-4 fill-white" />
+              {training ? 'Sedang Memproses...' : 'Proses Data & Simpan Ke Database'}
+            </button>
           </motion.div>
 
-          {/* Config Training */}
-          <motion.div variants={fadeUp} className="vs-card p-6">
-            <h3 className="text-[14px] font-bold text-[var(--vs-ink)] flex items-center gap-2 mb-5">
-              <Settings2 className="w-4 h-4 text-[var(--vs-muted-2)]" /> Konfigurasi Training
-            </h3>
-            <div className="space-y-2">
-              {[
-                { label: 'SMOTE (Balancing Kelas)',      desc: 'Tangani ketidakseimbangan kelas target churn.',      val: smote,      set: setSmote },
-                { label: 'Feature Engineering',          desc: 'Kalkulasi fitur turunan untuk meningkatkan presisi.',  val: featureEng, set: setFeatureEng },
-                { label: 'Hyperparameter Tuning (Grid)', desc: 'Cari parameter model terbaik (menambah waktu latih).', val: hyperParam, set: setHyperParam },
-              ].map(opt => (
-                <label key={opt.label} className="flex items-center justify-between p-3.5 border border-[var(--vs-line)] bg-[var(--vs-surface)] rounded-xl hover:bg-[var(--vs-bg)] cursor-pointer transition-colors">
-                  <div>
-                    <div className="text-[13px] font-medium text-[var(--vs-ink)]">{opt.label}</div>
-                    <div className="text-[12px] text-[var(--vs-muted-2)] mt-0.5">{opt.desc}</div>
-                  </div>
-                  <div className="vs-toggle" data-state={String(opt.val)} onClick={() => opt.set(v => !v)}>
-                    <div className="vs-toggle-thumb" />
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            {training && (
-              <div className="mt-5 p-4 rounded-xl bg-[var(--vs-bg)] border border-[var(--vs-line)]">
-                <div className="flex justify-between text-[12px] font-medium text-[var(--vs-ink)] mb-2.5">
-                  <span className="flex items-center gap-2">
-                    <div className="w-3 h-3 border-2 border-[var(--vs-brand)] border-t-transparent rounded-full animate-spin" />
-                    Training model...
-                  </span>
-                  <span className="font-mono">{progress}%</span>
-                </div>
-                <div className="w-full bg-[var(--vs-line)] rounded-full h-1.5 overflow-hidden">
-                  <motion.div className="h-full rounded-full bg-[var(--vs-brand)]" animate={{ width: `${progress}%` }} transition={{ duration: 0.3 }} />
-                </div>
-              </div>
-            )}
-
-            <div className="mt-5 pt-5 border-t border-[var(--vs-line-soft)]">
-              <button className="vs-btn vs-btn--primary w-full justify-center" disabled={training} onClick={handleTrain}>
-                <Play className="w-4 h-4 fill-white" />
-                {training ? 'Mengeksekusi Pipeline...' : 'Mulai Training'}
-              </button>
-            </div>
-          </motion.div>
-
-          {/* Riwayat Training */}
+          {/* tabel riwayat (dikembalikan pakai tombol aksi) */}
           <motion.div variants={fadeUp} className="vs-card overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--vs-line)]">
-              <h3 className="text-[14px] font-bold text-[var(--vs-ink)]">Riwayat Training</h3>
+              <h3 className="text-[14px] font-bold text-[var(--vs-ink)]">Riwayat Aktivitas Pemrosesan Data</h3>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left">
                 <thead>
                   <tr className="bg-[var(--vs-bg)] border-b border-[var(--vs-line)]">
-                    {['Tanggal', 'Algoritma', 'Akurasi', 'AUC-ROC', 'F1-Score', 'Status'].map(h => (
-                      <th key={h} className="px-5 py-3 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider whitespace-nowrap">{h}</th>
-                    ))}
+                    <th className="px-5 py-3 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase">No</th>
+                    <th className="px-5 py-3 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase">Waktu & Tanggal</th>
+                    <th className="px-5 py-3 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase">Diproses Oleh</th>
+                    {/* Kolom Aksi Dikembalikan */}
+                    <th className="px-5 py-3 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase">Aksi</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[var(--vs-line-soft)]">
-                  {mockModelHistory.map(m => (
-                    <tr key={m.id} className="hover:bg-[var(--vs-bg)] transition-colors">
-                      <td className="px-5 py-3.5 text-[12px] text-[var(--vs-muted)] font-mono">{m.tanggal}</td>
-                      <td className="px-5 py-3.5 text-[13px] font-medium text-[var(--vs-ink)]">{m.algoritma}</td>
-                      <td className="px-5 py-3.5 text-[13px] font-bold text-[var(--vs-ink)] tabular-nums">{m.akurasi}%</td>
-                      <td className="px-5 py-3.5 text-[13px] text-[var(--vs-muted)] tabular-nums">{m.auc_roc}</td>
-                      <td className="px-5 py-3.5 text-[13px] text-[var(--vs-muted)] tabular-nums">{m.f1_score}</td>
-                      <td className="px-5 py-3.5">{statusBadge(m.status)}</td>
+                  {isLoadingData ? (
+                    <tr>
+                      <td colSpan="4" className="px-5 py-8 text-center">
+                        <div className="flex items-center justify-center gap-2 text-[12px] text-slate-500">
+                          <div className="w-4 h-4 border-2 border-[var(--vs-brand)] border-t-transparent rounded-full animate-spin" />
+                          Memuat Riwayat Data...
+                        </div>
+                      </td>
                     </tr>
-                  ))}
+                  ) : modelHistory.length > 0 ? (
+                    modelHistory.map((m, index) => {
+                      const displayNum = index + 1; // penomoran mulai dari 1 berurutan
+                      return (
+                        <tr key={m.id} className="hover:bg-slate-50 transition-colors group">
+                          <td className="px-5 py-3.5 text-[12px] font-bold text-[var(--vs-brand)]">{displayNum}</td>
+                          <td className="px-5 py-3.5 text-[12px] flex items-center gap-2">
+                            <Clock className="w-3 h-3 text-slate-400 group-hover:text-[var(--vs-brand)] transition-colors" /> 
+                            {formatDateTime(m.tanggal)}
+                          </td>
+                          <td className="px-5 py-3.5 text-[13px] font-medium">
+                            <div className="flex items-center gap-2">
+                              <User className="w-3.5 h-3.5 text-slate-400 group-hover:text-[var(--vs-brand)] transition-colors" /> 
+                              {m.processed_by || 'System'}
+                            </div>
+                          </td>
+                          {/* Tombol Lihat Detail */}
+                          <td className="px-5 py-3.5">
+                            <button 
+                              onClick={() => handleViewHistoryDetail(m, displayNum)}
+                              className="text-[var(--vs-brand)] bg-blue-50/50 hover:bg-blue-100 hover:text-blue-700 px-3 py-1.5 rounded-md flex items-center gap-1.5 text-[12px] font-bold transition-all cursor-pointer border border-transparent hover:border-blue-200"
+                            >
+                              <Eye className="w-3.5 h-3.5" /> Lihat Detail
+                            </button>
+                          </td>
+                        </tr>
+                      )
+                    })
+                  ) : (
+                    <tr>
+                      <td colSpan="4" className="px-5 py-6 text-center text-[12px] text-slate-500">Belum Ada Riwayat Aktivitas.</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </motion.div>
         </div>
 
-        {/* Right Sidebar */}
+        {/* ringkasan dashboard */}
         <div className="space-y-5">
-
           <motion.div variants={fadeUp} className="vs-card p-5">
             <h3 className="text-[14px] font-bold text-[var(--vs-ink)] flex items-center gap-2 mb-4">
-              <BarChart2 className="w-4 h-4 text-[var(--vs-brand)]" /> Overview Model Aktif
+              <PieChart className="w-4 h-4 text-[var(--vs-brand)]" /> Ringkasan Prediksi Terakhir
             </h3>
-            {mockModelHistory.filter(m => m.status === 'Aktif').map(m => (
-              <div key={m.id}>
-                {[
-                  ['Algoritma', m.algoritma], ['Akurasi', `${m.akurasi}%`],
-                  ['AUC-ROC', m.auc_roc],    ['Precision', `${m.precision_churn}%`],
-                  ['Recall', `${m.recall_churn}%`], ['F1-Score', m.f1_score],
-                  ['Tanggal Deploy', m.tanggal],
-                ].map(([k, v]) => (
-                  <div key={k} className="flex justify-between items-center py-2.5 border-b border-[var(--vs-line-soft)] last:border-0">
-                    <span className="text-[12px] text-[var(--vs-muted)]">{k}</span>
-                    <span className="text-[13px] font-bold text-[var(--vs-ink)] font-mono">{v}</span>
-                  </div>
-                ))}
-                <div className="pt-3 flex justify-between items-center">
-                  <span className="text-[12px] text-[var(--vs-muted-2)]">Status Sistem</span>
-                  <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-50 border border-emerald-100 text-emerald-700 text-[11px] font-bold rounded-md">
-                    <span className="w-1.5 h-1.5 bg-[var(--vs-success)] rounded-full animate-pulse" /> Operasional
-                  </span>
-                </div>
+            {isLoadingData ? (
+              <div className="py-8 flex items-center justify-center gap-2 text-[12px] text-slate-500">
+                <div className="w-4 h-4 border-2 border-[var(--vs-brand)] border-t-transparent rounded-full animate-spin" />
+                Membaca Data...
               </div>
-            ))}
-          </motion.div>
-
-          <motion.div variants={fadeUp} className="vs-card p-5">
-            <h3 className="text-[14px] font-bold text-[var(--vs-ink)] mb-1">Feature Importance</h3>
-            <p className="text-[12px] text-[var(--vs-muted-2)] mb-5">5 variabel paling berpengaruh</p>
-            <div className="space-y-4">
-              {mockFeatureImportance.map(f => (
-                <div key={f.feature_name}>
-                  <div className="flex justify-between text-[12px] mb-1.5">
-                    <span className="font-medium text-[var(--vs-ink)] capitalize">{f.feature_name.replace(/_/g, ' ')}</span>
-                    <span className="text-[var(--vs-muted)] tabular-nums font-medium">{(f.importance_score * 100).toFixed(0)}%</span>
-                  </div>
-                  <div className="w-full bg-[var(--vs-line)] rounded-full h-1.5 overflow-hidden">
-                    <motion.div
-                      className="h-full rounded-full bg-[var(--vs-brand)]"
-                      initial={{ width: 0 }}
-                      animate={{ width: `${(f.importance_score / maxImportance) * 100}%` }}
-                      transition={{ duration: 0.8, delay: 0.2 }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
+            ) : batchSummary ? (
+              <div className="space-y-3 text-[13px]">
+                <div className="flex justify-between border-b pb-2"><span>Total Pelanggan:</span><b className="text-slate-800">{batchSummary.total} Orang</b></div>
+                <div className="flex justify-between text-red-600"><span>Risiko Tinggi:</span><b>{batchSummary.high}</b></div>
+                <div className="flex justify-between text-amber-600"><span>Risiko Sedang:</span><b>{batchSummary.medium}</b></div>
+                <div className="flex justify-between text-emerald-600"><span>Risiko Rendah:</span><b>{batchSummary.low}</b></div>
+                <div className="pt-2 text-[11px] text-slate-400 italic">Data Per: {formatDateTime(batchSummary.tanggal)}</div>
+              </div>
+            ) : (
+              <p className="text-xs text-center py-4 text-slate-400">Belum Ada Data Prediksi</p>
+            )}
           </motion.div>
         </div>
       </motion.div>
+
+      {/* modal detail */}
+      <AnimatePresence>
+        {selectedHistory && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-10 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="bg-white w-full max-w-5xl h-[80vh] rounded-3xl shadow-2xl flex flex-col overflow-hidden"
+            >
+              <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                <div>
+                  <h2 className="text-xl font-bold text-slate-800">Detail Hasil Prediksi</h2>
+                  <p className="text-sm text-slate-500">Diproses Oleh {selectedHistory.processed_by || 'System'} Pada {formatDateTime(selectedHistory.tanggal)}</p>
+                </div>
+                <button onClick={() => setSelectedHistory(null)} className="p-2 hover:bg-slate-200 rounded-full transition-colors">
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="flex-1 overflow-auto p-6">
+                {loadingDetail ? (
+                  <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500 italic">
+                    <div className="w-8 h-8 border-2 border-[var(--vs-brand)] border-t-transparent rounded-full animate-spin" />
+                    Memuat Data Historis...
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {/* section filter */}
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-slate-700">
+                        Daftar Pelanggan ({filteredDetails.length} Data)
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Filter className="w-4 h-4 text-slate-500" />
+                        <select 
+                          value={filterRisk} 
+                          onChange={(e) => setFilterRisk(e.target.value)}
+                          className="border border-slate-300 rounded-lg text-sm px-3 py-1.5 focus:outline-none focus:border-[var(--vs-brand)] bg-white text-slate-700 font-medium cursor-pointer"
+                        >
+                          <option value="All">Semua Risiko</option>
+                          <option value="Tinggi">Risiko Tinggi</option>
+                          <option value="Sedang">Risiko Sedang</option>
+                          <option value="Rendah">Risiko Rendah</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="border rounded-2xl overflow-hidden shadow-sm">
+                      <table className="w-full text-left text-[12px]">
+                        <thead className="bg-slate-50 border-b">
+                          <tr>
+                            <th className="px-4 py-3 font-bold text-slate-600">No</th>
+                            <th className="px-4 py-3 font-bold text-slate-600">ID Pelanggan</th>
+                            <th className="px-4 py-3 font-bold text-slate-600">Nama Perusahaan</th>
+                            <th className="px-4 py-3 font-bold text-slate-600">Skor Churn</th>
+                            <th className="px-4 py-3 font-bold text-slate-600 text-center">Level Risiko</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {filteredDetails.length > 0 ? (
+                            filteredDetails.map((d, idx) => (
+                              <tr key={d.id} className="hover:bg-slate-50">
+                                <td className="px-4 py-3 text-slate-400 font-mono">{idx + 1}</td>
+                                <td className="px-4 py-3 font-mono font-semibold text-[var(--vs-brand)]">{d.customer_id}</td>
+                                <td className="px-4 py-3 text-slate-700 font-medium uppercase">{d.company_name}</td>
+                                <td className="px-4 py-3 font-bold text-slate-800 tabular-nums">{d.churn_score}%</td>
+                                <td className="px-4 py-3 text-center">
+                                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                    d.risk_level === 'Tinggi' ? 'bg-red-100 text-red-700' : 
+                                    d.risk_level === 'Sedang' ? 'bg-amber-100 text-amber-700' : 
+                                    'bg-emerald-100 text-emerald-700'
+                                  }`}>
+                                    {d.risk_level}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          ) : (
+                            <tr>
+                              <td colSpan="5" className="px-4 py-8 text-center text-slate-500 italic">
+                                Tidak ada data dengan filter {filterRisk}.
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <ToastContainer toasts={toasts} onRemove={remove} />
     </DashboardShell>

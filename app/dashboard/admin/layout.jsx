@@ -13,8 +13,13 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     if (loading) return;
-    if (!user) { router.replace('/login'); return; }
-    if (profile && profile.role !== 'admin') router.replace('/dashboard/staff');
+    if (!user) { 
+      router.replace('/login'); 
+      return; 
+    }
+    if (profile && profile.role !== 'admin') {
+      router.replace('/dashboard/staff');
+    }
   }, [user, profile, loading, router]);
 
   if (loading) {

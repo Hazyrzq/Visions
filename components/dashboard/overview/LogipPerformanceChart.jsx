@@ -29,24 +29,28 @@ const tooltipStyle = {
   boxShadow: '0 16px 48px rgba(15,23,42,0.25)',
 };
 
-export default function LogipPerformanceChart({ data }) {
+export default function LogipPerformanceChart({ data = [] }) {
   const [tab, setTab] = useState('6m');
 
-  const chartData = useMemo(
-    () =>
-      data.map((d) => ({
-        ...d,
-        target: Math.max(8, +(d.churn_rate * 0.82).toFixed(1)),
-      })),
-    [data],
-  );
+  // Potong data sesuai tab yang dipilih (3 bulan, 6 bulan, atau 12 bulan/setahun)
+  const chartData = useMemo(() => {
+    let slicedData = data;
+    if (tab === 'q') slicedData = data.slice(-3); // Kuartal = 3 bulan terakhir
+    else if (tab === '6m') slicedData = data.slice(-6); // 6 bulan terakhir
+    else if (tab === 'y') slicedData = data.slice(-12); // Tahun = 12 bulan terakhir
+
+    return slicedData.map((d) => ({
+      ...d,
+      target: Math.max(8, +(d.churn_rate * 0.82).toFixed(1)),
+    }));
+  }, [data, tab]);
 
   return (
     <motion.div variants={fadeUp} className="rounded-[24px] border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Performa churn</h2>
-          <p className="mt-1 text-[13px] text-slate-500">Aktual vs target mitigasi (mock trend)</p>
+          <p className="mt-1 text-[13px] text-slate-500">Aktual vs target mitigasi AI</p>
         </div>
         <div className="flex rounded-full border border-slate-200/90 bg-slate-50/90 p-1">
           {tabs.map((t) => (

@@ -166,12 +166,12 @@ export default function UserManagementPage() {
 
   return (
     <DashboardShell
-      title="User management"
-      description="Kelola hak akses admin dan staf di platform."
+      title="Manajemen Pengguna"
+      description="Kelola hak akses admin dan staf di platform secara terpusat."
       icon={Shield}
       actions={(
         <button type="button" className="vs-btn vs-btn--primary" onClick={openAdd}>
-          <UserPlus className="h-4 w-4" /> Tambah pengguna
+          <UserPlus className="h-4 w-4" /> Tambah Pengguna
         </button>
       )}
     >
@@ -202,12 +202,12 @@ export default function UserManagementPage() {
                   <td className="px-5 py-3.5">
                     <span className={`vs-tag ${u.role === 'admin' ? 'vs-tag--blue' : ''}`}
                       style={u.role !== 'admin' ? { background: 'var(--vs-bg-2)', color: 'var(--vs-muted)', borderColor: 'var(--vs-line)' } : {}}>
-                      {u.role}
+                      {u.role.charAt(0).toUpperCase() + u.role.slice(1)}
                     </span>
                   </td>
                   <td className="px-5 py-3.5 text-[13px] font-bold text-[var(--vs-ink)] tabular-nums">{u.role === 'admin' ? '—' : (u.assigned_count ?? 0)}</td>
                   <td className="px-5 py-3.5 text-[12px] text-[var(--vs-muted)] font-mono">
-                    {u.last_login ? new Date(u.last_login).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum pernah'}
+                    {u.last_login ? new Date(u.last_login).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum Pernah'}
                   </td>
                   <td className="px-5 py-3.5">
                     <span className={`vs-tag ${u.is_active ? 'vs-tag--low' : ''}`}

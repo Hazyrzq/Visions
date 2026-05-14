@@ -18,7 +18,7 @@ export default function Topbar({ onMenuClick }) {
       initial={{ opacity: 0, y: -6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-      className="mx-2 mt-2 shrink-0 rounded-2xl border border-slate-200/80 bg-white/95 px-2 shadow-sm backdrop-blur-md md:mx-3 md:mt-3"
+      className="relative z-[100] mx-2 mt-2 shrink-0 rounded-2xl border border-slate-200/80 bg-white/95 px-2 shadow-sm backdrop-blur-md md:mx-3 md:mt-3"
     >
       <div className="flex h-[58px] items-center gap-2 px-2 md:h-[60px] md:gap-3 md:px-3">
 

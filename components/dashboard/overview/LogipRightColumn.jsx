@@ -1,11 +1,12 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Phone, Video, MoreHorizontal, Activity } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { mockActivities, mockAlerts } from '@/lib/mockData';
+import { supabase } from '@/lib/supabase'; // Langsung pakai supabase, bye-bye mockData!
 
 function initials(name) {
   if (!name) return '?';
@@ -21,16 +22,60 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
   const { profile } = useAuth();
   const handle = profile?.email?.split('@')[0] ?? 'pengguna';
 
-  const activities = (activityFilterStaffId
-    ? mockActivities.filter((a) => a.staff_id === activityFilterStaffId)
-    : mockActivities
-  ).slice(0, 5);
+  const [activities, setActivities] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Ambil data AKTIVITAS dan PEMBERITAHUAN asli dari database
+  useEffect(() => {
+    const fetchRealData = async () => {
+      setLoading(true);
+
+      // 1. Fetch data dari tabel 'activities'
+      // Asumsi ada relasi ke tabel profiles (buat nama staff) & customers (buat nama perusahaan)
+      let actQuery = supabase
+        .from('activities')
+        .select('*, staff:profiles(full_name), customers(company_name)')
+        .order('created_at', { ascending: false })
+        .limit(5);
+
+      if (activityFilterStaffId) {
+        actQuery = actQuery.eq('staff_id', activityFilterStaffId);
+      }
+
+      const { data: actData, error: actError } = await actQuery;
+
+      // 2. Fetch data dari tabel 'alerts'
+      const { data: alertData, error: alertError } = await supabase
+        .from('alerts')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      // Kalau ga ada error, simpan datanya ke state
+      if (!actError && actData) {
+        setActivities(actData);
+      }
+      if (!alertError && alertData) {
+        setAlerts(alertData);
+      }
+
+      setLoading(false);
+    };
+
+    fetchRealData();
+  }, [activityFilterStaffId]);
 
   const alertDot = (type) => {
     const t = (type || '').toLowerCase();
-    if (t === 'critical') return 'bg-red-500';
-    if (t === 'warning') return 'bg-amber-500';
+    if (t === 'critical' || t === 'tinggi') return 'bg-red-500';
+    if (t === 'warning' || t === 'sedang') return 'bg-amber-500';
     return 'bg-[var(--vs-brand)]';
+  };
+
+  const formatTime = (dateStr) => {
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -82,26 +127,39 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
             Lihat semua
           </Link>
         </div>
-        <ul className="relative space-y-0 before:absolute before:left-[15px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-200">
-          {activities.map((a) => (
-            <li key={a.id} className="relative flex gap-3 pb-6 last:pb-0">
-              <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
-                {initials(a.staff_name)}
-              </div>
-              <div className="min-w-0 pt-0.5">
-                <p className="text-[13px] font-semibold text-slate-900">{a.staff_name}</p>
-                <p className="mt-0.5 text-[12px] leading-relaxed text-slate-600">
-                  <span className="font-medium text-slate-800">{a.company_name}</span>
-                  {' · '}
-                  {a.description}
-                </p>
-                <p className="mt-1 text-[11px] font-medium text-slate-400">
-                  {new Date(a.created_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        
+        {loading ? (
+          <p className="text-[12px] text-slate-500 text-center py-4">Memuat aktivitas...</p>
+        ) : activities.length === 0 ? (
+          <p className="text-[12px] text-slate-500 text-center py-4">Belum ada aktivitas tim.</p>
+        ) : (
+          <ul className="relative space-y-0 before:absolute before:left-[15px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-200">
+            {activities.map((a) => {
+              // Mapping data biar fleksibel misal nama kolom di DB kamu sedikit beda
+              const staffName = a.staff?.full_name || a.staff_name || 'System';
+              const companyName = a.customers?.company_name || a.company_name || 'Umum';
+              const description = a.notes || a.description || a.activity_type || 'Melakukan aktivitas';
+
+              return (
+                <li key={a.id} className="relative flex gap-3 pb-6 last:pb-0">
+                  <div className="relative z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-[10px] font-bold text-slate-600">
+                    {initials(staffName)}
+                  </div>
+                  <div className="min-w-0 pt-0.5">
+                    <p className="text-[13px] font-semibold text-slate-900">{staffName}</p>
+                    <p className="mt-0.5 text-[12px] leading-relaxed text-slate-600">
+                      {companyName !== 'Umum' && <><span className="font-medium text-slate-800">{companyName}</span>{' · '}</>}
+                      {description}
+                    </p>
+                    <p className="mt-1 text-[11px] font-medium text-slate-400">
+                      {formatTime(a.created_at)}
+                    </p>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
 
       {/* Ringkasan alert singkat */}
@@ -111,20 +169,35 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
           <Activity className="h-4 w-4 text-[var(--vs-brand)]" />
           <h3 className="text-sm font-bold text-slate-900">Pemberitahuan</h3>
         </div>
-        <ul className="space-y-3">
-          {mockAlerts.slice(0, 3).map((a) => (
-            <li key={a.id} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
-              <div className="flex gap-2">
-                <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${alertDot(a.type)}`} />
-                <div className="min-w-0">
-                  <p className="text-[12px] font-semibold text-slate-900">{a.title}</p>
-                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{a.message}</p>
-                  <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">{a.time}</p>
-                </div>
-              </div>
-            </li>
-          ))}
-        </ul>
+        
+        {loading ? (
+          <p className="text-[12px] text-slate-500 text-center py-4">Memuat pemberitahuan...</p>
+        ) : alerts.length === 0 ? (
+          <p className="text-[12px] text-slate-500 text-center py-4">Tidak ada pemberitahuan baru.</p>
+        ) : (
+          <ul className="space-y-3">
+            {alerts.map((a) => {
+              const type = a.type || a.risk_level || 'info';
+              const title = a.title || 'Pemberitahuan';
+              const message = a.message || a.description || '';
+              
+              return (
+                <li key={a.id} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+                  <div className="flex gap-2">
+                    <span className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${alertDot(type)}`} />
+                    <div className="min-w-0">
+                      <p className="text-[12px] font-semibold text-slate-900">{title}</p>
+                      <p className="mt-0.5 text-[11px] leading-relaxed text-slate-500">{message}</p>
+                      <p className="mt-1 text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                        {formatTime(a.created_at || a.time)}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
       </div>
       ) : null}
     </motion.aside>
