@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Upload, Play, CheckCircle, Database, PieChart, Users, AlertTriangle, Eye, X, Clock, User, Filter } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Upload, Play, CheckCircle, Database, PieChart, Users, AlertTriangle, Eye, X, Clock, User, Filter, RotateCcw, Loader2 } from 'lucide-react';
+import { startRetensi, getRetensiStatus, getRetensiHasil, RISK_COLOR, RISK_LABEL } from '@/lib/churnshield';
 import { motion, AnimatePresence } from 'framer-motion';
-import { fadeUp, stagger } from '@/lib/motion';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
 import DashboardShell from '@/components/dashboard/DashboardShell';
 import Papa from 'papaparse';
@@ -36,6 +36,48 @@ export default function AdminDataPage() {
 
   const [training, setTraining] = useState(false);
   const [progress, setProgress] = useState(0);
+
+  // Retensi Otomatis
+  const [retensiStatus, setRetensiStatus] = useState('idle');
+  const [retensiHasil, setRetensiHasil] = useState(null);
+  const [retensiError, setRetensiError] = useState('');
+  const [retensiStarting, setRetensiStarting] = useState(false);
+  const retensiPollRef = useRef(null);
+
+  const stopRetensiPoll = () => {
+    if (retensiPollRef.current) { clearInterval(retensiPollRef.current); retensiPollRef.current = null; }
+  };
+
+  const fetchRetensiHasil = async () => {
+    try {
+      const res = await getRetensiHasil();
+      setRetensiHasil(Array.isArray(res) ? res : (res?.hasil ?? res?.data ?? []));
+    } catch {}
+  };
+
+  const pollRetensiStatus = async () => {
+    try {
+      const res = await getRetensiStatus();
+      const s = res?.status ?? 'idle';
+      setRetensiStatus(s);
+      if (s === 'completed' || s === 'done') { stopRetensiPoll(); setRetensiStatus('completed'); fetchRetensiHasil(); }
+      else if (s === 'error' || s === 'failed') { stopRetensiPoll(); setRetensiStatus('error'); setRetensiError(res?.message ?? 'Gagal'); }
+    } catch (e) { stopRetensiPoll(); setRetensiStatus('error'); setRetensiError(e.message); }
+  };
+
+  const handleStartRetensi = async () => {
+    setRetensiStarting(true);
+    setRetensiError('');
+    setRetensiHasil(null);
+    try {
+      await startRetensi();
+      setRetensiStatus('running');
+      retensiPollRef.current = setInterval(pollRetensiStatus, 3000);
+    } catch (e) { setRetensiError(e.message); setRetensiStatus('error'); }
+    finally { setRetensiStarting(false); }
+  };
+
+  useEffect(() => () => stopRetensiPoll(), []);
 
   const fetchAllHistory = async () => {
     const { data: models, error } = await supabase
@@ -157,7 +199,7 @@ export default function AdminDataPage() {
 
             return {
               customer_id: row.customer_id,
-              company_name: `PT Pelanggan ${row.customer_id.split('-')[1] || row.customer_id}`, 
+              company_name: `Pelanggan ${row.customer_id.split('-')[1] || row.customer_id}`, 
               plan_type: row.plan_type,
               contract_type: row.contract_type,
               customer_type: row.customer_type,
@@ -230,10 +272,10 @@ export default function AdminDataPage() {
       description="Kelola Dataset Dan Pantau Riwayat Prediksi Log Aktivitas Admin Secara Transparan."
       icon={Database}
     >
-      <motion.div variants={stagger} className="grid xl:grid-cols-3 gap-5">
+      <div className="grid xl:grid-cols-3 gap-5">
         <div className="xl:col-span-2 space-y-5">
           {/* box upload */}
-          <motion.div variants={fadeUp} className="vs-card p-6">
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.05, ease:[0.16,1,0.3,1] }} className="vs-card p-6">
             <h3 className="text-[14px] font-bold text-[var(--vs-ink)] flex items-center gap-2 mb-5">
               <Upload className="w-4 h-4 text-[var(--vs-muted-2)]" /> Upload 5 Dataset Mentah
             </h3>
@@ -262,7 +304,7 @@ export default function AdminDataPage() {
           </motion.div>
 
           {/* tabel riwayat (dikembalikan pakai tombol aksi) */}
-          <motion.div variants={fadeUp} className="vs-card overflow-hidden">
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.12, ease:[0.16,1,0.3,1] }} className="vs-card overflow-hidden">
             <div className="px-5 py-4 border-b border-[var(--vs-line)]">
               <h3 className="text-[14px] font-bold text-[var(--vs-ink)]">Riwayat Aktivitas Pemrosesan Data</h3>
             </div>
@@ -328,7 +370,7 @@ export default function AdminDataPage() {
 
         {/* ringkasan dashboard */}
         <div className="space-y-5">
-          <motion.div variants={fadeUp} className="vs-card p-5">
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.19, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
             <h3 className="text-[14px] font-bold text-[var(--vs-ink)] flex items-center gap-2 mb-4">
               <PieChart className="w-4 h-4 text-[var(--vs-brand)]" /> Ringkasan Prediksi Terakhir
             </h3>
@@ -350,7 +392,7 @@ export default function AdminDataPage() {
             )}
           </motion.div>
         </div>
-      </motion.div>
+      </div>
 
       {/* modal detail */}
       <AnimatePresence>
@@ -447,6 +489,135 @@ export default function AdminDataPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── Retensi Otomatis ── */}
+      <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.26, ease:[0.16,1,0.3,1] }} className="mt-8">
+        <div className="vs-card overflow-hidden">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 px-6 py-5"
+            style={{ background: 'linear-gradient(135deg,#eff6ff 0%,#f8faff 100%)' }}>
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-600 shadow-sm shadow-blue-200">
+                <RotateCcw className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-[15px] font-bold text-slate-900">Retensi Otomatis</h2>
+                <p className="text-[12px] text-slate-500">Jalankan AI untuk mengirim aksi retensi ke pelanggan berisiko tinggi</p>
+              </div>
+            </div>
+
+            {/* Status + Tombol */}
+            <div className="flex items-center gap-3 shrink-0">
+              <div className={`inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[12px] font-semibold border ${
+                retensiStatus === 'running'   ? 'bg-blue-50 text-blue-600 border-blue-200'
+                : retensiStatus === 'completed' ? 'bg-emerald-50 text-emerald-600 border-emerald-200'
+                : retensiStatus === 'error'     ? 'bg-red-50 text-red-600 border-red-200'
+                : 'bg-slate-100 text-slate-500 border-slate-200'
+              }`}>
+                {retensiStatus === 'running'   ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                 : retensiStatus === 'completed' ? <CheckCircle className="h-3.5 w-3.5" />
+                 : retensiStatus === 'error'     ? <AlertTriangle className="h-3.5 w-3.5" />
+                 : <Clock className="h-3.5 w-3.5" />}
+                {retensiStatus === 'running'   ? 'Sedang berjalan…'
+                 : retensiStatus === 'completed' ? 'Selesai'
+                 : retensiStatus === 'error'     ? 'Gagal'
+                 : 'Siap dijalankan'}
+              </div>
+              <button
+                onClick={handleStartRetensi}
+                disabled={retensiStatus === 'running' || retensiStarting}
+                className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-[13px] font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {retensiStatus === 'running' || retensiStarting
+                  ? <Loader2 className="h-4 w-4 animate-spin" />
+                  : <Play className="h-4 w-4 fill-white" />}
+                {retensiStatus === 'running' || retensiStarting ? 'Memproses…' : 'Jalankan Retensi'}
+              </button>
+            </div>
+          </div>
+
+          {/* Error state */}
+          {retensiError && (
+            <div className="mx-6 mt-4 flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+              <AlertTriangle className="h-4 w-4 shrink-0 text-red-500" />
+              <p className="text-[12px] font-medium text-red-600">{retensiError}</p>
+            </div>
+          )}
+
+          {/* Idle empty state */}
+          {retensiStatus === 'idle' && !retensiHasil && (
+            <div className="flex flex-col items-center justify-center py-14 text-center px-6">
+              <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
+                <RotateCcw className="h-6 w-6 text-blue-400" />
+              </div>
+              <p className="text-[13px] font-semibold text-slate-700">Belum ada hasil retensi</p>
+              <p className="mt-1 text-[12px] text-slate-400 max-w-xs">Klik "Jalankan Retensi" untuk memulai proses AI pada pelanggan berisiko tinggi.</p>
+            </div>
+          )}
+
+          {/* Running state */}
+          {retensiStatus === 'running' && (
+            <div className="flex flex-col items-center justify-center py-14 text-center px-6">
+              <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50">
+                <Loader2 className="h-6 w-6 animate-spin text-blue-500" />
+              </div>
+              <p className="text-[13px] font-semibold text-slate-700">AI sedang memproses…</p>
+              <p className="mt-1 text-[12px] text-slate-400">Menganalisis pelanggan berisiko tinggi dan menyusun aksi retensi.</p>
+            </div>
+          )}
+
+          {/* Hasil */}
+          {retensiHasil && retensiHasil.length > 0 && (
+            <div className="p-5">
+              <div className="mb-3 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  <span className="text-[13px] font-bold text-slate-900">
+                    {retensiHasil.length} pelanggan diproses
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-400">Menampilkan maks. 50 data</span>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-slate-200">
+                <div className="overflow-x-auto max-h-72">
+                  <table className="min-w-full text-left">
+                    <thead className="sticky top-0 z-10">
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        {['Customer ID', 'Risiko', 'Skor Churn', 'Rekomendasi Aksi'].map(h => (
+                          <th key={h} className="px-4 py-2.5 text-[11px] font-bold uppercase tracking-wide text-slate-500 whitespace-nowrap">{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 bg-white">
+                      {retensiHasil.slice(0, 50).map((h, i) => {
+                        const lvl = h.risk_level ?? (h.churn_score >= 70 ? 'High' : h.churn_score >= 30 ? 'Medium' : 'Low');
+                        const c = RISK_COLOR[lvl] ?? RISK_COLOR.Low;
+                        return (
+                          <tr key={h.customer_id ?? i} className="hover:bg-slate-50/70 transition-colors">
+                            <td className="px-4 py-3 text-[12px] font-mono font-semibold text-blue-600">{h.customer_id ?? '—'}</td>
+                            <td className="px-4 py-3">
+                              <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-0.5 text-[10px] font-semibold ${c.bg} ${c.text} ${c.border}`}>
+                                <span className={`h-1.5 w-1.5 rounded-full ${c.dot}`} />
+                                {RISK_LABEL[lvl] ?? lvl}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-[13px] font-bold tabular-nums text-slate-800">
+                              {typeof h.churn_score === 'number' ? `${h.churn_score.toFixed(1)}%` : '—'}
+                            </td>
+                            <td className="px-4 py-3 text-[12px] text-slate-500 max-w-[240px] truncate">
+                              {h.action ?? h.recommendation ?? '—'}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </motion.div>
 
       <ToastContainer toasts={toasts} onRemove={remove} />
     </DashboardShell>

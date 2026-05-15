@@ -2,9 +2,8 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Trash2, Users, Search, AlertTriangle, Activity, DollarSign, Filter, ChevronLeft, ChevronRight, TrendingDown } from 'lucide-react';
+import { Trash2, Users, Search, AlertTriangle, Activity, ChevronLeft, ChevronRight, TrendingDown, X } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { fadeUp, stagger } from '@/lib/motion';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -191,51 +190,63 @@ function AdminCustomerInner() {
         </div>
       )}
     >
-      <motion.div variants={stagger} className="space-y-6">
-        
+      <div className="space-y-6">
+
         {/* bagian kpi */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <motion.div variants={fadeUp} className="vs-card p-5 border-l-4 border-l-[var(--vs-brand)]">
-            <div className="text-[12px] font-semibold text-[var(--vs-muted-2)] flex items-center gap-1.5 mb-2">
-              <Users className="w-4 h-4 text-[var(--vs-brand)]" /> Total Pelanggan
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.05, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50">
+                <Users className="w-4 h-4 text-blue-600" />
+              </div>
             </div>
             <div className="text-2xl lg:text-3xl font-bold text-[var(--vs-ink)]">
               {loading ? '-' : filtered.length}
             </div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Total Pelanggan</div>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="vs-card p-5 border-l-4 border-l-red-600 bg-red-50/30">
-            <div className="text-[12px] font-semibold text-red-700 flex items-center gap-1.5 mb-2">
-              <TrendingDown className="w-4 h-4 text-red-600" /> Revenue at Risk
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.12, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50">
+                <TrendingDown className="w-4 h-4 text-red-500" />
+              </div>
             </div>
-            <div className="text-2xl lg:text-3xl font-bold text-red-700 truncate" title={formatCurrency(revenueAtRisk)}>
+            <div className="text-2xl lg:text-3xl font-bold text-red-600 truncate" title={formatCurrency(revenueAtRisk)}>
               {loading ? '-' : formatCurrency(revenueAtRisk)}
             </div>
-            <div className="text-[10px] text-red-500 mt-1 font-medium">Dari pelanggan risiko tinggi</div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Revenue at Risk</div>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="vs-card p-5 border-l-4 border-l-orange-500">
-            <div className="text-[12px] font-semibold text-[var(--vs-muted-2)] flex items-center gap-1.5 mb-2">
-              <AlertTriangle className="w-4 h-4 text-orange-500" /> Risiko Tinggi
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.19, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
+                <AlertTriangle className="w-4 h-4 text-orange-500" />
+              </div>
             </div>
             <div className="text-2xl lg:text-3xl font-bold text-orange-600">
               {loading ? '-' : highRiskCount}
             </div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Risiko Tinggi</div>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="vs-card p-5 border-l-4 border-l-amber-500">
-            <div className="text-[12px] font-semibold text-[var(--vs-muted-2)] flex items-center gap-1.5 mb-2">
-              <Activity className="w-4 h-4 text-amber-500" /> Avg. Churn Score
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.26, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50">
+                <Activity className="w-4 h-4 text-amber-500" />
+              </div>
             </div>
             <div className="text-2xl lg:text-3xl font-bold text-amber-600">
               {loading ? '-' : `${avgChurnScore}%`}
             </div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Avg. Churn Score</div>
           </motion.div>
         </div>
 
         {/* control panel search & filter */}
-        <motion.div variants={fadeUp} className="bg-white p-3.5 rounded-2xl border border-[var(--vs-line)] shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
-          <div className="relative w-full md:w-[300px]">
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.33, ease:[0.16,1,0.3,1] }} className="bg-white p-3.5 rounded-2xl border border-[var(--vs-line)] shadow-sm flex flex-wrap items-center gap-3">
+          {/* Search */}
+          <div className="relative w-[220px] shrink-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vs-muted-3)]" />
             <Input
               placeholder="Cari nama atau ID..."
@@ -244,34 +255,53 @@ function AdminCustomerInner() {
               className="border-[var(--vs-line)] bg-[var(--vs-bg)] pl-9 w-full focus:border-[var(--vs-brand-200)]"
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-            <div className="flex items-center gap-1.5 text-sm font-semibold text-slate-500">
-              <Filter className="w-4 h-4" /> Filter:
-            </div>
-            <select
-              value={riskFilter}
-              onChange={(e) => setRiskFilter(e.target.value)}
-              className="border border-[var(--vs-line)] bg-[var(--vs-bg)] rounded-xl px-3 py-2 text-[13px] font-medium text-slate-700 focus:outline-none focus:border-[var(--vs-brand)] cursor-pointer"
-            >
-              <option value="Semua">Semua Risiko</option>
-              <option value="Tinggi">Risiko Tinggi</option>
-              <option value="Sedang">Risiko Sedang</option>
-              <option value="Rendah">Risiko Rendah</option>
-            </select>
-            <select
-              value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-              className="border border-[var(--vs-line)] bg-[var(--vs-bg)] rounded-xl px-3 py-2 text-[13px] font-medium text-slate-700 focus:outline-none focus:border-[var(--vs-brand)] cursor-pointer"
-            >
-              {planOptions.map(p => (
-                <option key={p} value={p}>{p === 'Semua' ? 'Semua Paket' : p}</option>
-              ))}
-            </select>
+
+          <div className="h-6 w-px bg-slate-200 shrink-0" />
+
+          {/* Risk pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Risiko</span>
+            {['Semua', 'Tinggi', 'Sedang', 'Rendah'].map((r) => {
+              const active = riskFilter === r;
+              const dot = r === 'Tinggi' ? 'bg-red-500' : r === 'Sedang' ? 'bg-amber-500' : r === 'Rendah' ? 'bg-emerald-500' : null;
+              return (
+                <button key={r} onClick={() => setRiskFilter(r)}
+                  className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold transition-all border ${
+                    active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'
+                  }`}>
+                  {dot && <span className={`h-2 w-2 rounded-full ${dot}`} />}
+                  {r}
+                </button>
+              );
+            })}
           </div>
+
+          <div className="h-6 w-px bg-slate-200 shrink-0" />
+
+          {/* Plan pills */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Paket</span>
+            {planOptions.map((p) => (
+              <button key={p} onClick={() => setPlanFilter(p)}
+                className={`rounded-full px-3 py-1 text-[12px] font-semibold transition-all border ${
+                  planFilter === p ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'
+                }`}>
+                {p}
+              </button>
+            ))}
+          </div>
+
+          {/* Reset */}
+          {(riskFilter !== 'Semua' || planFilter !== 'Semua') && (
+            <button onClick={() => { setRiskFilter('Semua'); setPlanFilter('Semua'); }}
+              className="ml-auto flex items-center gap-1 text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors shrink-0">
+              <X className="w-3.5 h-3.5" /> Reset
+            </button>
+          )}
         </motion.div>
 
         {/* tabel data pelanggan */}
-        <motion.div variants={fadeUp} className="vs-card overflow-hidden">
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.4, ease:[0.16,1,0.3,1] }} className="vs-card overflow-hidden">
           {loading ? (
             <div className="flex items-center justify-center p-16">
               <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--vs-brand)] border-t-transparent" />
@@ -309,28 +339,24 @@ function AdminCustomerInner() {
                     {paginatedData.map((c) => {
                       const sel = selectedIds.includes(c.id);
                       return (
-                        <motion.tr
+                        <tr
                           key={c.id}
-                          layout
                           onClick={() => openDetail(c.id)}
                           className={`cursor-pointer transition-colors ${sel ? 'bg-[var(--vs-brand-50)]' : 'hover:bg-[var(--vs-bg)]'}`}
                         >
-                          <td className="px-5 py-3.5 text-center">
+                          <td
+                            className="px-5 py-3.5 text-center"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             <input
                               type="checkbox"
                               className="h-4 w-4 cursor-pointer accent-[var(--vs-brand)]"
                               checked={sel}
-                              onChange={(e) => {
-                                e.stopPropagation();
-                                toggleOne(c.id);
-                              }}
+                              onChange={() => toggleOne(c.id)}
                             />
                           </td>
                           <td className="px-3 py-3.5">
                             <div className="flex items-center gap-3">
-                              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-[var(--vs-line)] bg-[var(--vs-bg-2)] text-[11px] font-bold uppercase text-[var(--vs-muted)]">
-                                {c.company_name?.substring(0, 2) || '??'}
-                              </div>
                               <div className="min-w-0">
                                 <div className="text-[13px] font-semibold text-[var(--vs-ink)] transition-colors hover:text-[var(--vs-brand)] truncate max-w-[140px]">
                                   {c.company_name}
@@ -380,7 +406,7 @@ function AdminCustomerInner() {
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </td>
-                        </motion.tr>
+                        </tr>
                       );
                     })}
                   </tbody>
@@ -434,7 +460,7 @@ function AdminCustomerInner() {
             </>
           )}
         </motion.div>
-      </motion.div>
+      </div>
 
       <ToastContainer toasts={toasts} onRemove={remove} />
 

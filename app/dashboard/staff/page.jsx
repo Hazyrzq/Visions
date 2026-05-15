@@ -1,16 +1,19 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { pageVariants, fadeUp, stagger } from '@/lib/motion';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { mockChurnTrend, mockCustomers, mockStaffPerformance } from '@/lib/mockData';
+import { supabase } from '@/lib/supabase';
 import LogipHero from '@/components/dashboard/overview/LogipHero';
 import LogipPerformanceChart from '@/components/dashboard/overview/LogipPerformanceChart';
 import LogipRightColumn from '@/components/dashboard/overview/LogipRightColumn';
 import RiskBadge from '@/components/dashboard/RiskBadge';
 import ChurnScoreBar from '@/components/dashboard/ChurnScoreBar';
+
+const MONTH_NAMES = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
 function riskDot(level) {
   if (level === 'Tinggi') return 'bg-orange-500';
@@ -20,9 +23,51 @@ function riskDot(level) {
 
 export default function StaffOverviewPage() {
   const { profile } = useAuth();
-  const myCustomers = mockCustomers.filter((c) => c.assigned_to === profile?.id);
-  const highPriority = myCustomers.filter((c) => c.risk_level === 'Tinggi');
-  const myPerf = mockStaffPerformance.find((s) => s.id === profile?.id);
+  const [myCustomers, setMyCustomers] = useState([]);
+  const [activitiesCount, setActivitiesCount] = useState(0);
+  const [churnTrend, setChurnTrend] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    const thisMonthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+
+    const fetchAll = async () => {
+      const [{ data: customers }, { count: actCount }, { data: predictions }] = await Promise.all([
+        supabase.from('customers').select('*').eq('assigned_to', profile.id),
+        supabase.from('activities').select('*', { count: 'exact', head: true })
+          .eq('staff_id', profile.id).gte('created_at', thisMonthStart),
+        supabase.from('prediction_history').select('churn_score,created_at').order('created_at'),
+      ]);
+
+      setMyCustomers(customers ?? []);
+      setActivitiesCount(actCount ?? 0);
+
+      // build churn trend
+      const map = {};
+      for (const row of (predictions ?? [])) {
+        if (!row.created_at || row.churn_score == null) continue;
+        const d = new Date(row.created_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        if (!map[key]) map[key] = { bulan: MONTH_NAMES[d.getMonth()], _key: key, sum: 0, n: 0 };
+        map[key].sum += Number(row.churn_score);
+        map[key].n += 1;
+      }
+      const trend = Object.values(map).sort((a,b) => a._key.localeCompare(b._key)).slice(-12)
+        .map(m => ({ bulan: m.bulan, churn_rate: m.n > 0 ? Math.round((m.sum / m.n) * 10) / 10 : 0 }));
+      setChurnTrend(trend);
+      setLoading(false);
+    };
+    fetchAll();
+  }, [profile?.id]);
+
+  const highPriority = myCustomers.filter(c => c.risk_level === 'Tinggi');
+  const successRate = myCustomers.length > 0
+    ? Math.round((myCustomers.filter(c => !c.churn_actual).length / myCustomers.length) * 100)
+    : 0;
+  const donePct = myCustomers.length
+    ? Math.round(((myCustomers.length - highPriority.length) / myCustomers.length) * 100)
+    : 100;
 
   const stats = [
     {
@@ -34,26 +79,22 @@ export default function StaffOverviewPage() {
       bg: highPriority.length ? 'bg-red-50' : 'bg-emerald-50',
     },
     {
-      label: 'Selesai (bulan)',
-      value: String(myPerf?.resolved_month ?? 0),
-      hint: 'Tindakan sukses',
-      trend: '+2',
+      label: 'Aktivitas (bulan)',
+      value: String(activitiesCount),
+      hint: 'Total tindakan bulan ini',
+      trend: activitiesCount > 0 ? `+${activitiesCount}` : '0',
       color: 'text-[var(--vs-brand)]',
       bg: 'bg-[var(--vs-brand-50)]',
     },
     {
       label: 'Success rate',
-      value: `${myPerf?.success_rate ?? 0}%`,
-      hint: 'Retensi pelanggan',
-      trend: '+5%',
+      value: `${successRate}%`,
+      hint: 'Pelanggan tidak churn',
+      trend: `${successRate}%`,
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
     },
   ];
-
-  const donePct = myCustomers.length
-    ? Math.round(((myCustomers.length - highPriority.length) / myCustomers.length) * 100)
-    : 100;
 
   return (
     <motion.div
@@ -78,7 +119,7 @@ export default function StaffOverviewPage() {
               <p className="text-[12px] font-semibold uppercase tracking-wide text-slate-400">{s.label}</p>
               <div className="mt-3 flex items-end justify-between gap-2">
                 <span className={`text-[2rem] font-bold tabular-nums leading-none tracking-tight sm:text-[2.25rem] ${s.color}`}>
-                  {s.value}
+                  {loading ? '—' : s.value}
                 </span>
                 <span className={`mb-1 rounded-lg px-2 py-0.5 text-[11px] font-bold ${s.bg} ${s.color}`}>{s.trend}</span>
               </div>
@@ -87,38 +128,37 @@ export default function StaffOverviewPage() {
           ))}
         </motion.div>
 
-        <LogipPerformanceChart data={mockChurnTrend} />
+        <LogipPerformanceChart data={churnTrend} />
 
         <motion.div variants={fadeUp} className="rounded-[24px] border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Prioritas Anda</h2>
-              <p className="mt-1 text-[13px] text-slate-500">Pelanggan yang di-assign — risiko tinggi dulu.</p>
+              <p className="mt-1 text-[13px] text-slate-500">
+                {loading ? 'Memuat...' : `${myCustomers.length} pelanggan — risiko tinggi dulu.`}
+              </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-600">
                 Selesai <span className="text-slate-900">{donePct}%</span>
               </div>
-              <button
-                type="button"
-                className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[12px] font-semibold text-slate-700 shadow-sm"
-              >
-                Minggu ini <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-              </button>
             </div>
           </div>
 
-          {highPriority.length === 0 ? (
-            <p className="py-10 text-center text-[13px] text-slate-500">Tidak ada prioritas tinggi — kerja bagus.</p>
+          {loading ? (
+            <div className="flex justify-center py-10">
+              <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--vs-brand)] border-t-transparent" />
+            </div>
+          ) : highPriority.length === 0 ? (
+            <p className="py-10 text-center text-[13px] text-slate-500">
+              {myCustomers.length === 0 ? 'Belum ada pelanggan yang di-assign.' : 'Tidak ada prioritas tinggi — kerja bagus.'}
+            </p>
           ) : (
             <ul className="divide-y divide-slate-100">
-              {highPriority.map((c) => (
+              {highPriority.slice(0, 10).map((c) => (
                 <li key={c.id}>
                   <Link href="/dashboard/staff/customer" className="block py-4 transition-colors hover:bg-slate-50/80">
                     <div className="flex items-start gap-4 sm:gap-5">
-                      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[11px] font-bold uppercase text-slate-600">
-                        {(c.company_name || '?').slice(0, 2)}
-                      </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="text-[14px] font-semibold text-slate-900">{c.company_name}</p>
@@ -132,7 +172,6 @@ export default function StaffOverviewPage() {
                       <div className="flex shrink-0 items-center gap-2 pt-1">
                         <span className={`h-2.5 w-2.5 rounded-full ${riskDot(c.risk_level)}`} />
                         <span className="text-[13px] font-bold tabular-nums text-slate-800">{c.churn_score}</span>
-                        <MoreHorizontal className="h-5 w-5 text-slate-300" />
                       </div>
                     </div>
                   </Link>

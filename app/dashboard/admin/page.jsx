@@ -22,8 +22,6 @@ function riskDot(level) {
 export default function AdminOverviewPage() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Ambil data pelanggan asli dari database
   useEffect(() => {
     const fetchCustomers = async () => {
       const { data, error } = await supabase
@@ -31,12 +29,9 @@ export default function AdminOverviewPage() {
         .select('*')
         .order('churn_score', { ascending: false });
 
-      if (data && !error) {
-        setCustomers(data);
-      }
+      if (data && !error) setCustomers(data);
       setLoading(false);
     };
-
     fetchCustomers();
   }, []);
 
@@ -123,6 +118,7 @@ export default function AdminOverviewPage() {
           subtitle="Ringkas retensi, risiko, dan tindakan tim — tampilan kerja harian yang fokus."
         />
 
+
         <motion.div variants={stagger} className="grid gap-4 sm:grid-cols-3">
           {stats.map((s) => (
             <motion.div
@@ -196,9 +192,6 @@ export default function AdminOverviewPage() {
                     href={`/dashboard/admin/customer?detail=${encodeURIComponent(c.id)}`}
                     className="flex items-center gap-4 py-4 transition-colors hover:bg-slate-50/80 sm:gap-5"
                   >
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-50 text-[11px] font-bold uppercase text-slate-600">
-                      {(c.company_name || '?').slice(0, 2)}
-                    </div>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[14px] font-semibold text-slate-900">{c.company_name}</p>
                       <p className="mt-0.5 truncate text-[12px] text-slate-500">{c.plan_type} · {c.customer_id}</p>

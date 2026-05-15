@@ -31,21 +31,21 @@ export default function StaffLayout({ children }) {
   if (!user || (profile && profile.role !== 'staff')) return null;
 
   return (
-    <div className="flex h-screen bg-[var(--vs-bg)] overflow-hidden">
+    <motion.div
+      className="flex h-screen bg-[var(--vs-bg)] overflow-hidden"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.2, ease: 'easeIn' }}
+    >
       <Sidebar mobileOpen={mobileOpen} onMobileClose={() => setMobileOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0">
         <Topbar onMenuClick={() => setMobileOpen(true)} />
-        <motion.main
-          className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-5 md:py-6 lg:px-6 lg:py-8"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
-        >
+        <main className="min-h-0 flex-1 overflow-y-auto px-3 py-4 md:px-5 md:py-6 lg:px-6 lg:py-8 [scrollbar-gutter:stable]">
           <div className="mx-auto h-full w-full max-w-[1360px]">
             <div className="vs-workspace p-5 md:p-7 lg:p-9">{children}</div>
           </div>
-        </motion.main>
+        </main>
       </div>
-    </div>
+    </motion.div>
   );
 }

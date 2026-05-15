@@ -7,7 +7,6 @@ import {
   DollarSign, Briefcase, CalendarDays, PieChart, LifeBuoy, Star, AlertCircle, Database
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { fadeUp, stagger } from '@/lib/motion';
 import { mockCustomers } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import ActivityModal from '@/components/customer/ActivityModal';
@@ -204,11 +203,11 @@ export default function CustomerDetailContent({ customerId }) {
         </div>
       </div>
 
-      <motion.div variants={stagger} className="flex flex-col gap-5">
-        
+      <div className="flex flex-col gap-5">
+
         {/* ROW 1: INFO UMUM & FINANSIAL */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <motion.div variants={fadeUp} className="vs-card p-4">
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.05, ease:[0.16,1,0.3,1] }} className="vs-card p-4">
             <h3 className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-[var(--vs-muted)] border-b pb-2">
               <Briefcase className="h-3.5 w-3.5" /> Profil Langganan
             </h3>
@@ -232,7 +231,7 @@ export default function CustomerDetailContent({ customerId }) {
             </div>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="vs-card p-4 bg-emerald-50/30 border-emerald-100">
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.12, ease:[0.16,1,0.3,1] }} className="vs-card p-4 bg-emerald-50/30 border-emerald-100">
             <h3 className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-emerald-700 border-b border-emerald-100 pb-2">
               <DollarSign className="h-3.5 w-3.5" /> Data Keuangan
             </h3>
@@ -262,7 +261,7 @@ export default function CustomerDetailContent({ customerId }) {
 
         {/* ROW 2: USAGE & SUPPORT METRICS */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <motion.div variants={fadeUp} className="vs-card p-4">
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.19, ease:[0.16,1,0.3,1] }} className="vs-card p-4">
             <h3 className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-blue-700 border-b border-blue-100 pb-2 bg-blue-50/20 -mx-4 px-4 pt-1">
               <PieChart className="h-3.5 w-3.5" /> Engagement Penggunaan
             </h3>
@@ -288,7 +287,7 @@ export default function CustomerDetailContent({ customerId }) {
             </div>
           </motion.div>
 
-          <motion.div variants={fadeUp} className="vs-card p-4">
+          <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.26, ease:[0.16,1,0.3,1] }} className="vs-card p-4">
             <h3 className="mb-3 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-amber-700 border-b border-amber-100 pb-2 bg-amber-50/20 -mx-4 px-4 pt-1">
               <LifeBuoy className="h-3.5 w-3.5" /> Kualitas Layanan & Support
             </h3>
@@ -318,7 +317,7 @@ export default function CustomerDetailContent({ customerId }) {
         </div>
 
         {/* SECTION AI CHURN ANALYSIS */}
-        <motion.div variants={fadeUp} className="vs-card overflow-hidden">
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.33, ease:[0.16,1,0.3,1] }} className="vs-card overflow-hidden">
           <div className="flex items-center justify-between border-b border-[var(--vs-line)] bg-[var(--vs-brand-50)] px-4 py-3 sm:px-5">
             <h3 className="flex items-center gap-2 text-[13px] font-bold text-[var(--vs-ink)]">
               <Activity className="h-4 w-4 text-[var(--vs-brand)]" /> AI Churn Analysis
@@ -357,7 +356,7 @@ export default function CustomerDetailContent({ customerId }) {
         </motion.div>
 
         {/* SECTION SEMUA DATA (RAW DUMP) */}
-        <motion.div variants={fadeUp} className="vs-card p-5 border border-slate-200">
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.40, ease:[0.16,1,0.3,1] }} className="vs-card p-5 border border-slate-200">
           <h3 className="mb-4 flex items-center gap-2 text-[12px] font-bold uppercase tracking-wider text-slate-700 border-b border-slate-100 pb-3">
             <Database className="h-4 w-4 text-slate-500" /> Semua Parameter ML (Raw Data)
           </h3>
@@ -383,7 +382,7 @@ export default function CustomerDetailContent({ customerId }) {
         </motion.div>
 
         {/* SECTION ACTIVITY HISTORY */}
-        <motion.div variants={fadeUp} className="vs-card p-5 sm:p-6">
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.47, ease:[0.16,1,0.3,1] }} className="vs-card p-5 sm:p-6">
           <h3 className="mb-4 flex items-center gap-2 text-[13px] font-bold text-[var(--vs-ink)] border-b border-[var(--vs-line-soft)] pb-3">
             <Clock className="h-4 w-4 text-[var(--vs-muted-3)]" /> Log Aktivitas Admin
           </h3>
@@ -416,7 +415,7 @@ export default function CustomerDetailContent({ customerId }) {
             </div>
           )}
         </motion.div>
-      </motion.div>
+      </div>
 
       <ActivityModal
         isOpen={isActivityModalOpen}

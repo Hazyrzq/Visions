@@ -4,40 +4,60 @@ import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { scaleIn } from '@/lib/motion';
 import { useAuth } from '@/lib/hooks/useAuth';
-import { Mail, Phone, Users, Ticket, X } from 'lucide-react';
+import { Mail, Phone, Users, FileText, X } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { addNotifikasi } from '@/lib/churnshield';
 
 const activityTypes = [
-  { id: 'Email',   icon: Mail,   selClass: 'bg-[var(--vs-brand-50)] border-[var(--vs-brand-100)] text-[var(--vs-brand)]' },
-  { id: 'Call',    icon: Phone,  selClass: 'bg-emerald-50 border-emerald-200 text-emerald-600' },
-  { id: 'Meeting', icon: Users,  selClass: 'bg-purple-50 border-purple-200 text-purple-600' },
-  { id: 'Ticket',  icon: Ticket, selClass: 'bg-amber-50 border-amber-200 text-amber-600' },
+  { id: 'email',   label: 'Email',   icon: Mail,      selClass: 'bg-[var(--vs-brand-50)] border-[var(--vs-brand-100)] text-[var(--vs-brand)]' },
+  { id: 'call',    label: 'Call',    icon: Phone,     selClass: 'bg-emerald-50 border-emerald-200 text-emerald-600' },
+  { id: 'meeting', label: 'Meeting', icon: Users,     selClass: 'bg-purple-50 border-purple-200 text-purple-600' },
+  { id: 'note',    label: 'Note',    icon: FileText,  selClass: 'bg-amber-50 border-amber-200 text-amber-600' },
 ];
 
-export default function ActivityModal({ isOpen, onClose, customerId, onActivityAdded }) {
+export default function ActivityModal({ isOpen, onClose, customerTextId, onActivityAdded }) {
   const { profile } = useAuth();
-  const [type, setType]     = useState('Email');
-  const [notes, setNotes]   = useState('');
+  const [type, setType]       = useState('email');
+  const [notes, setNotes]     = useState('');
   const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!notes.trim()) return;
+    if (!notes.trim() || !customerTextId || !profile?.id) return;
     setLoading(true);
-    setTimeout(() => {
-      onActivityAdded({
-        id: Date.now().toString(),
-        customer_id: customerId,
-        staff_id: profile?.id || 'dummy-staff',
-        activity_type: type,
-        notes: notes.trim(),
-        created_at: new Date().toISOString(),
-        staff: { full_name: profile?.full_name || 'Admin / Staff' },
-      });
+    setError('');
+    const { data, error: err } = await supabase
+      .from('activities')
+      .insert({
+        staff_id: profile.id,
+        customer_id: customerTextId,
+        action_type: type,
+        description: notes.trim(),
+      })
+      .select('*, staff:profiles(full_name)')
+      .single();
+
+    if (err) {
+      setError('Gagal menyimpan. Coba lagi.');
       setLoading(false);
-      setNotes('');
-      setType('Email');
-      onClose();
-    }, 600);
+      return;
+    }
+
+    // kirim notifikasi ke admin (fire-and-forget, jangan block)
+    const typeLabel = { email: 'Email', call: 'Panggilan', meeting: 'Meeting', note: 'Catatan', other: 'Aktivitas' };
+    addNotifikasi({
+      title: `${typeLabel[type] ?? 'Aktivitas'} baru — ${customerTextId}`,
+      message: `${profile?.full_name ?? 'Staf'} mencatat ${typeLabel[type]?.toLowerCase() ?? 'aktivitas'} untuk pelanggan ${customerTextId}: ${notes.trim()}`,
+      type: 'activity',
+      customer_id: customerTextId,
+    }).catch(() => {});
+
+    onActivityAdded(data);
+    setNotes('');
+    setType('email');
+    setLoading(false);
+    onClose();
   };
 
   return (
@@ -60,13 +80,13 @@ export default function ActivityModal({ isOpen, onClose, customerId, onActivityA
               <div className="space-y-2.5">
                 <label className="text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider">Jenis Aktivitas</label>
                 <div className="grid grid-cols-4 gap-2">
-                  {activityTypes.map(({ id, icon: Icon, selClass }) => {
+                  {activityTypes.map(({ id, label, icon: Icon, selClass }) => {
                     const sel = type === id;
                     return (
                       <button key={id} type="button" onClick={() => setType(id)}
                         className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-all ${sel ? selClass : 'bg-[var(--vs-bg)] border-[var(--vs-line)] text-[var(--vs-muted-3)] hover:bg-[var(--vs-bg-2)]'}`}>
                         <Icon className="w-4 h-4" />
-                        <span className="text-[11px] font-semibold">{id}</span>
+                        <span className="text-[11px] font-semibold">{label}</span>
                       </button>
                     );
                   })}
@@ -83,6 +103,8 @@ export default function ActivityModal({ isOpen, onClose, customerId, onActivityA
                   className="vs-input w-full h-32 p-3 resize-none"
                 />
               </div>
+
+              {error && <p className="text-[12px] text-red-500">{error}</p>}
 
               <div className="flex gap-3 pt-1">
                 <button type="button" onClick={onClose} className="vs-btn vs-btn--ghost flex-1 justify-center">Batal</button>

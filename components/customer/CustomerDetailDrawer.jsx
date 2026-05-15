@@ -16,14 +16,7 @@ export default function CustomerDetailDrawer({ open, customerId, onClose, onExit
     if (open) exitNotified.current = false;
   }, [open]);
 
-  useEffect(() => {
-    if (!customerId) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = 'hidden';
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [customerId]);
+  // body overflow lock intentionally removed — scroll container is motion.main, not body
 
   useEffect(() => {
     if (!open) return;
@@ -60,7 +53,7 @@ export default function CustomerDetailDrawer({ open, customerId, onClose, onExit
         role="dialog"
         aria-modal="true"
         aria-labelledby="customer-detail-drawer-title"
-        className="relative flex h-full w-full max-w-xl flex-col border-l border-[var(--vs-line)] bg-[var(--vs-surface)] shadow-[0_0_40px_-12px_rgba(15,23,42,0.35)]"
+        className="relative flex h-full w-full max-w-2xl flex-col border-l border-[var(--vs-line)] bg-[var(--vs-surface)] shadow-[0_0_40px_-12px_rgba(15,23,42,0.35)]"
         initial={{ x: '100%' }}
         animate={{ x: open ? 0 : '100%' }}
         transition={{ type: 'spring', damping: 34, stiffness: 380 }}

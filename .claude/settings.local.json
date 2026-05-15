@@ -5,7 +5,9 @@
       "Bash(npx tailwindcss *)",
       "Bash(curl *)",
       "Bash(taskkill /F /IM node.exe)",
-      "PowerShell(Stop-Process *)"
+      "PowerShell(Stop-Process *)",
+      "Bash(npx next *)",
+      "Bash(node --input-type=module --eval \"import\\('./app/dashboard/admin/report/page.jsx'\\)\")"
     ]
   }
 }

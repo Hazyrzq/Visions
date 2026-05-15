@@ -4,11 +4,9 @@ import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { motion } from 'framer-motion';
-import { fadeUp } from '@/lib/motion';
 import { Users } from 'lucide-react';
 import CustomerTable from '@/components/customer/CustomerTable';
 import CustomerDetailDrawer from '@/components/customer/CustomerDetailDrawer';
-import { mockCustomers } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import DashboardShell from '@/components/dashboard/DashboardShell';
 import { hrefWithCustomerDetail, hrefWithoutCustomerDetail } from '@/lib/customerDetailNav';
@@ -38,15 +36,11 @@ function StaffCustomerInner() {
     if (!profile) return;
     supabase
       .from('customers')
-      .select('*')
+      .select('*, staff:profiles!customers_assigned_to_fkey(full_name)')
       .eq('assigned_to', profile.id)
       .order('churn_score', { ascending: false })
-      .then(({ data, error }) => {
-        if (error || !data?.length) {
-          setCustomers(mockCustomers.filter((c) => c.assigned_to === profile.id));
-        } else {
-          setCustomers(data);
-        }
+      .then(({ data }) => {
+        setCustomers(data ?? []);
         setLoading(false);
       });
   }, [profile]);
@@ -65,7 +59,7 @@ function StaffCustomerInner() {
       description="Daftar pelanggan yang di-assign ke Anda."
       icon={Users}
     >
-      <motion.div variants={fadeUp}>
+      <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.1, ease:[0.16,1,0.3,1] }}>
         <CustomerTable
           customers={customers}
           loading={loading}
