@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import {
   UserPlus, X, Shield, ChevronDown, Check,
   ToggleLeft, ToggleRight, Mail, CalendarDays,
-  Users, ShieldCheck, UserCog, Save,
+  Users, ShieldCheck, UserCog, Save, Gauge,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { mockProfiles } from '@/lib/mockData';
@@ -76,6 +76,7 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
   if (!mounted) return null;
 
   const isEdit = mode === 'edit';
+  const isStaff = form.role === 'staff';
   const initials = (form.full_name || user?.full_name || '?')
     .split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase();
 
@@ -155,6 +156,29 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
                   </div>
                 ))}
               </div>
+
+              {/* Kapasitas bar (staff edit mode) */}
+              {user.role === 'staff' && (
+                <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                      <Gauge className="h-3 w-3" /> Kapasitas
+                    </p>
+                    <span className="text-[11px] font-bold text-slate-600">
+                      {user.assigned_count ?? 0} / {user.max_load ?? 10}
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                    <div className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${Math.min(100, ((user.assigned_count ?? 0) / (user.max_load ?? 10)) * 100)}%`,
+                        background: (user.assigned_count ?? 0) >= (user.max_load ?? 10) ? '#EF4444'
+                          : (user.assigned_count ?? 0) >= (user.max_load ?? 10) * 0.8 ? '#F59E0B'
+                          : '#3B82F6',
+                      }} />
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -189,6 +213,54 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
                 options={[{ value: 'staff', label: 'Staff' }, { value: 'admin', label: 'Admin' }]}
               />
             </div>
+
+            {/* Kapasitas Maks — hanya tampil jika role staff */}
+            <AnimatePresence>
+              {isStaff && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="space-y-1.5">
+                    <label className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500">
+                      <Gauge className="h-3.5 w-3.5" /> Kapasitas Maks Pelanggan
+                    </label>
+                    <div className="flex items-center gap-3">
+                      <input
+                        type="number"
+                        min={1}
+                        max={10000}
+                        value={form.max_load}
+                        onChange={e => {
+                          const v = Math.max(1, Math.min(100, Number(e.target.value) || 1));
+                          setForm(p => ({ ...p, max_load: v }));
+                        }}
+                        className="vs-input w-24 px-3 py-2.5 text-center text-[14px] font-bold tabular-nums"
+                      />
+                      <div className="flex gap-1.5">
+                        {[50, 100, 500, 1000].map(n => (
+                          <button key={n} type="button"
+                            onClick={() => setForm(p => ({ ...p, max_load: n }))}
+                            className={`rounded-lg px-2.5 py-1.5 text-[11px] font-semibold transition-colors ${
+                              form.max_load === n
+                                ? 'bg-blue-600 text-white'
+                                : 'border border-slate-200 bg-slate-50 text-slate-600 hover:border-blue-300 hover:text-blue-700'
+                            }`}>
+                            {n}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <p className="text-[11px] text-slate-400">
+                      Jumlah maksimum pelanggan yang bisa di-assign ke staff ini. Default: 10.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {!isEdit && (
               <div className="space-y-1.5">
@@ -226,28 +298,47 @@ export default function UserManagementPage() {
   const { toasts, toast, remove } = useToast();
   const [profiles, setProfiles] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [drawerMode, setDrawerMode] = useState('add'); // 'add' | 'edit'
+  const [drawerMode, setDrawerMode] = useState('add');
   const [selectedUser, setSelectedUser] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState({ full_name: '', email: '', role: 'staff', password: '' });
+  const [form, setForm] = useState({ full_name: '', email: '', role: 'staff', password: '', max_load: 10 });
 
   const loadProfiles = async () => {
-    const { data } = await supabase.from('profiles').select('*').order('role').order('full_name');
-    setProfiles(data?.length ? data : mockProfiles);
+    // Ambil profiles + hitung assigned_count real dari tabel customers
+    const [{ data: profileData }, { data: customerData }] = await Promise.all([
+      supabase.from('profiles').select('*').order('role').order('full_name'),
+      supabase.from('customers').select('assigned_to').not('assigned_to', 'is', null),
+    ]);
+
+    if (!profileData?.length) { setProfiles(mockProfiles); return; }
+
+    // Hitung jumlah pelanggan per staff dari data customers
+    const countMap = {};
+    for (const row of customerData ?? []) {
+      if (row.assigned_to) countMap[row.assigned_to] = (countMap[row.assigned_to] ?? 0) + 1;
+    }
+
+    // Merge assigned_count real ke profile, last_login diambil dari Supabase auth
+    const merged = profileData.map(p => ({
+      ...p,
+      assigned_count: p.role === 'staff' ? (countMap[p.id] ?? 0) : null,
+    }));
+
+    setProfiles(merged);
   };
 
   useEffect(() => { loadProfiles(); }, []);
 
   const openEdit = (u) => {
     setSelectedUser(u);
-    setForm({ full_name: u.full_name, email: u.email ?? '', role: u.role, password: '' });
+    setForm({ full_name: u.full_name, email: u.email ?? '', role: u.role, password: '', max_load: u.max_load ?? 10 });
     setDrawerMode('edit');
     setDrawerOpen(true);
   };
 
   const openAdd = () => {
     setSelectedUser(null);
-    setForm({ full_name: '', email: '', role: 'staff', password: '' });
+    setForm({ full_name: '', email: '', role: 'staff', password: '', max_load: 10 });
     setDrawerMode('add');
     setDrawerOpen(true);
   };
@@ -263,7 +354,13 @@ export default function UserManagementPage() {
         const res = await fetch('/api/create-user', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: form.email, password: form.password, full_name: form.full_name, role: form.role }),
+          body: JSON.stringify({
+            email: form.email,
+            password: form.password,
+            full_name: form.full_name,
+            role: form.role,
+            max_load: form.role === 'staff' ? (form.max_load ?? 10) : 0,
+          }),
         });
         const result = await res.json();
         if (!result.success) throw new Error(result.error);
@@ -272,12 +369,42 @@ export default function UserManagementPage() {
         closeDrawer();
       } catch (err) { toast(err.message || 'Gagal menambahkan pengguna', 'error'); }
     } else {
-      const { error } = await supabase.from('profiles').update({ full_name: form.full_name, role: form.role }).eq('id', selectedUser.id);
-      if (error) { toast('Gagal memperbarui pengguna', 'error'); }
-      else {
-        setProfiles(prev => prev.map(p => p.id === selectedUser.id ? { ...p, full_name: form.full_name, role: form.role } : p));
-        setSelectedUser(prev => ({ ...prev, full_name: form.full_name, role: form.role }));
+      const updatePayload = {
+        full_name: form.full_name,
+        role: form.role,
+        // max_load: 0 untuk admin (NOT NULL constraint), nilai bermakna hanya untuk staff
+        max_load: form.role === 'staff' ? (form.max_load ?? 10) : 0,
+      };
+      try {
+        // 1. Update tabel profiles
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update(updatePayload)
+          .eq('id', selectedUser.id);
+        if (profileError) throw new Error(profileError.message);
+
+        // 2. Sync role ke auth.users user_metadata via API
+        // (diperlukan agar middleware/role check berbasis token tetap konsisten)
+        const metaRes = await fetch('/api/update-user-meta', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            userId: selectedUser.id,
+            full_name: form.full_name,
+            role: form.role,
+          }),
+        });
+        const metaResult = await metaRes.json();
+        if (!metaResult.success) {
+          // Tidak throw — profiles sudah tersimpan, metadata gagal tidak kritis
+          console.warn('[update-meta] gagal:', metaResult.error);
+        }
+
+        setProfiles(prev => prev.map(p => p.id === selectedUser.id ? { ...p, ...updatePayload } : p));
         toast('Pengguna berhasil diperbarui', 'success');
+        closeDrawer(); // No.4 — tutup drawer setelah berhasil
+      } catch (err) {
+        toast(err.message || 'Gagal memperbarui pengguna', 'error');
       }
     }
     setSaving(false);
@@ -308,47 +435,64 @@ export default function UserManagementPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[var(--vs-bg)] border-b border-[var(--vs-line)]">
-                {['Nama', 'Email', 'Role', 'Ditugaskan', 'Terakhir Login', 'Status'].map(h => (
+                {['Nama', 'Email', 'Role', 'Ditugaskan', 'Kapasitas', 'Terakhir Login', 'Status'].map(h => (
                   <th key={h} className="px-5 py-3.5 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-[var(--vs-line-soft)]">
-              {profiles.map(u => (
-                <tr
-                  key={u.id}
-                  onClick={() => openEdit(u)}
-                  className="cursor-pointer hover:bg-[var(--vs-bg)] transition-colors group"
-                >
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-[11px] font-bold text-white uppercase shadow-sm">
-                        {u.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
+              {profiles.map(u => {
+                const maxLoad = u.max_load ?? 10;
+                const assigned = u.assigned_count ?? 0;
+                const pct = Math.min(100, (assigned / maxLoad) * 100);
+                const barColor = assigned >= maxLoad ? '#EF4444' : assigned >= maxLoad * 0.8 ? '#F59E0B' : '#3B82F6';
+                return (
+                  <tr key={u.id} onClick={() => openEdit(u)}
+                    className="cursor-pointer hover:bg-[var(--vs-bg)] transition-colors group">
+                    <td className="px-5 py-3.5">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-[11px] font-bold text-white uppercase shadow-sm">
+                          {u.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2) || '?'}
+                        </div>
+                        <span className="text-[13px] font-semibold text-[var(--vs-ink)] group-hover:text-[var(--vs-brand)] transition-colors">{u.full_name}</span>
                       </div>
-                      <span className="text-[13px] font-semibold text-[var(--vs-ink)] group-hover:text-[var(--vs-brand)] transition-colors">{u.full_name}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-3.5 text-[13px] text-[var(--vs-muted)] font-mono">{u.email}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`vs-tag ${u.role === 'admin' ? 'vs-tag--blue' : ''}`}
-                      style={u.role !== 'admin' ? { background: 'var(--vs-bg-2)', color: 'var(--vs-muted)', borderColor: 'var(--vs-line)' } : {}}>
-                      {u.role === 'admin' ? <><ShieldCheck className="inline h-3 w-3 mr-1" />Admin</> : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5 text-[13px] font-bold text-[var(--vs-ink)] tabular-nums">
-                    {u.role === 'admin' ? '—' : (u.assigned_count ?? 0)}
-                  </td>
-                  <td className="px-5 py-3.5 text-[12px] text-[var(--vs-muted)] font-mono">
-                    {u.last_login ? new Date(u.last_login).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum Pernah'}
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <span className={`vs-tag ${u.is_active ? 'vs-tag--low' : ''}`}
-                      style={!u.is_active ? { background: 'var(--vs-bg-2)', color: 'var(--vs-muted-3)', borderColor: 'var(--vs-line-soft)' } : {}}>
-                      {u.is_active ? 'Aktif' : 'Nonaktif'}
-                    </span>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                    <td className="px-5 py-3.5 text-[13px] text-[var(--vs-muted)] font-mono">{u.email}</td>
+                    <td className="px-5 py-3.5">
+                      <span className={`vs-tag ${u.role === 'admin' ? 'vs-tag--blue' : ''}`}
+                        style={u.role !== 'admin' ? { background: 'var(--vs-bg-2)', color: 'var(--vs-muted)', borderColor: 'var(--vs-line)' } : {}}>
+                        {u.role === 'admin' ? <><ShieldCheck className="inline h-3 w-3 mr-1" />Admin</> : u.role.charAt(0).toUpperCase() + u.role.slice(1)}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3.5 text-[13px] font-bold text-[var(--vs-ink)] tabular-nums">
+                      {u.role === 'admin' ? '—' : assigned}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      {u.role === 'admin' ? (
+                        <span className="text-[13px] text-[var(--vs-muted)]">—</span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="w-16 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: barColor }} />
+                          </div>
+                          <span className={`text-[11px] font-semibold tabular-nums ${assigned >= maxLoad ? 'text-red-500' : 'text-slate-500'}`}>
+                            {assigned}/{maxLoad}
+                          </span>
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-5 py-3.5 text-[12px] text-[var(--vs-muted)] font-mono">
+                      {u.last_login ? new Date(u.last_login).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum Pernah'}
+                    </td>
+                    <td className="px-5 py-3.5">
+                      <span className={`vs-tag ${u.is_active ? 'vs-tag--low' : ''}`}
+                        style={!u.is_active ? { background: 'var(--vs-bg-2)', color: 'var(--vs-muted-3)', borderColor: 'var(--vs-line-soft)' } : {}}>
+                        {u.is_active ? 'Aktif' : 'Nonaktif'}
+                      </span>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

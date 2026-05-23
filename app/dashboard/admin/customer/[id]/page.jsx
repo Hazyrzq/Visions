@@ -29,10 +29,19 @@ const activityIcons = (type) => {
 };
 
 const riskTagClass = {
-  Tinggi: 'vs-tag vs-tag--high',
-  Sedang: 'vs-tag vs-tag--medium',
-  Rendah: 'vs-tag vs-tag--low',
+  High: 'vs-tag vs-tag--high',
+  Medium: 'vs-tag vs-tag--medium',
+  Low: 'vs-tag vs-tag--low',
 };
+
+
+// Hitung risk_level dari churn_score sesuai threshold baru
+function riskLevel(score) {
+  const s = parseFloat(score) || 0;
+  if (s >= 70) return 'High';
+  if (s >= 30) return 'Medium';
+  return 'Low';
+}
 
 // helper biar ga muncul tulisan "undefined"
 const formatText = (val, fallback = '-') => {
@@ -137,7 +146,7 @@ export default function CustomerDetailContent({ customerId }) {
     );
   }
 
-  const scoreColor = customer.churn_score > 70 ? 'var(--vs-danger)' : customer.churn_score > 40 ? 'var(--vs-warn)' : 'var(--vs-success)';
+  const scoreColor = customer.churn_score >= 70 ? 'var(--vs-danger)' : customer.churn_score >= 30 ? 'var(--vs-warn)' : 'var(--vs-success)';
 
   // Ambil data yang sudah diamankan (terhindar dari undefined/NaN)
   const avgUsage = formatNumber(customer.avg_usage_hrs ?? customer.monthly_usage_hrs);
@@ -190,8 +199,8 @@ export default function CustomerDetailContent({ customerId }) {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <span className={riskTagClass[formatText(customer.risk_level, 'Rendah')] ?? riskTagClass.Rendah}>
-            Risiko {formatText(customer.risk_level, 'Rendah')}
+          <span className={riskTagClass[formatText(customer.risk_level, 'Low')] ?? riskTagClass.Low}>
+            {formatText(customer.risk_level, 'Low')}
           </span>
           <button
             type="button"

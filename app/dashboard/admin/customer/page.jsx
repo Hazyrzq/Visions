@@ -77,13 +77,24 @@ function AdminCustomerInner() {
     }).format(num);
   };
 
+  // Normalize risk_level — terima format lama (Tinggi/Sedang/Rendah)
+  // maupun format baru (High/Medium/Low) dari database/ML model
+  // Harus didefinisikan sebelum 'filtered' agar tidak ReferenceError
+  const normalizeRisk = (lvl) => {
+    if (!lvl) return 'Low';
+    const v = lvl.trim();
+    if (v === 'Tinggi' || v === 'High')   return 'High';
+    if (v === 'Sedang' || v === 'Medium') return 'Medium';
+    return 'Low';
+  };
+
   const planOptions = ['Semua', ...Array.from(new Set(customers.map(c => c.plan_type).filter(Boolean)))];
 
   // logic filter data
   const filtered = customers.filter((c) => {
     const matchSearch = c.company_name?.toLowerCase().includes(search.toLowerCase()) || 
                         c.customer_id?.toLowerCase().includes(search.toLowerCase());
-    const matchRisk = riskFilter === 'Semua' || c.risk_level === riskFilter;
+    const matchRisk = riskFilter === 'Semua' || normalizeRisk(c.risk_level) === riskFilter;
     const matchPlan = planFilter === 'Semua' || c.plan_type === planFilter;
     
     return matchSearch && matchRisk && matchPlan;
@@ -151,8 +162,9 @@ function AdminCustomerInner() {
   };
 
   const riskTag = (lvl) => {
-    if (lvl === 'Tinggi') return 'vs-tag vs-tag--high';
-    if (lvl === 'Sedang') return 'vs-tag vs-tag--medium';
+    const n = normalizeRisk(lvl);
+    if (n === 'High')   return 'vs-tag vs-tag--high';
+    if (n === 'Medium') return 'vs-tag vs-tag--medium';
     return 'vs-tag vs-tag--low';
   };
 
@@ -165,12 +177,13 @@ function AdminCustomerInner() {
     return 'bg-slate-100 text-slate-600 border-slate-200';
   };
 
-  // hitung kpi baru (revenue at risk = total mrr dari yang risk nya tinggi)
+  // KPI: revenue at risk = total MRR dari semua pelanggan di list yang sedang ditampilkan (filtered)
+  // Mengikuti filter search + plan + risk yang aktif
   const revenueAtRisk = filtered
-    .filter(c => c.risk_level === 'Tinggi')
     .reduce((acc, c) => acc + (parseFloat(c.mrr) || 0), 0);
 
-  const highRiskCount = filtered.filter(c => c.risk_level === 'Tinggi').length;
+  // highRiskCount tetap hitung hanya yang High dari filtered
+  const highRiskCount = filtered.filter(c => normalizeRisk(c.risk_level) === 'High').length;
   const avgChurnScore = filtered.length 
     ? Math.round(filtered.reduce((acc, c) => acc + (c.churn_score || 0), 0) / filtered.length) 
     : 0;
@@ -261,9 +274,9 @@ function AdminCustomerInner() {
           {/* Risk pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Risiko</span>
-            {['Semua', 'Tinggi', 'Sedang', 'Rendah'].map((r) => {
+            {['Semua', 'High', 'Medium', 'Low'].map((r) => {
               const active = riskFilter === r;
-              const dot = r === 'Tinggi' ? 'bg-red-500' : r === 'Sedang' ? 'bg-amber-500' : r === 'Rendah' ? 'bg-emerald-500' : null;
+              const dot = r === 'High' ? 'bg-red-500' : r === 'Medium' ? 'bg-amber-500' : r === 'Low' ? 'bg-emerald-500' : null;
               return (
                 <button key={r} onClick={() => setRiskFilter(r)}
                   className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold transition-all border ${
@@ -376,14 +389,14 @@ function AdminCustomerInner() {
                           </td>
                           <td className="px-3 py-3.5">
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-[13px] font-bold tabular-nums ${c.churn_score > 70 ? 'text-[var(--vs-danger)]' : c.churn_score > 40 ? 'text-[var(--vs-warn)]' : 'text-[var(--vs-success)]'}`}>
+                              <span className={`text-[13px] font-bold tabular-nums ${c.churn_score >= 70 ? 'text-[var(--vs-danger)]' : c.churn_score >= 30 ? 'text-[var(--vs-warn)]' : 'text-[var(--vs-success)]'}`}>
                                 {c.churn_score}%
                               </span>
-                              {c.churn_score > 70 && <AlertTriangle className="h-3.5 w-3.5 text-[var(--vs-danger)]" />}
+                              {c.churn_score >= 70 && <AlertTriangle className="h-3.5 w-3.5 text-[var(--vs-danger)]" />}
                             </div>
                           </td>
                           <td className="px-3 py-3.5">
-                            <span className={riskTag(c.risk_level)}>{c.risk_level}</span>
+                            <span className={riskTag(c.risk_level)}>{normalizeRisk(c.risk_level)}</span>
                           </td>
                           <td className="px-3 py-3.5 text-[12px] text-[var(--vs-muted)]">
                             {c.staff?.full_name ? (

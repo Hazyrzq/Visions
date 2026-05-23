@@ -8,22 +8,9 @@ import { useAuth } from '@/lib/hooks/useAuth';
 
 const LEAVE_MS = 180;
 
-const placementClass = {
-  top: 'bottom-full right-0 mb-1',
-  bottom: 'top-full right-0 mt-2',
-  right: 'left-full top-1/2 ml-1.5 -translate-y-1/2',
-  left: 'right-full top-0 mr-1.5',
-};
-
 function initials(name) {
   if (!name) return '?';
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0])
-    .join('')
-    .toUpperCase();
+  return name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase();
 }
 
 function roleLabel(role) {
@@ -33,18 +20,10 @@ function roleLabel(role) {
 }
 
 function HoverBridge({ placement }) {
-  if (placement === 'top') {
-    return <div className="pointer-events-auto absolute -bottom-2 left-0 right-0 h-2" aria-hidden />;
-  }
-  if (placement === 'bottom') {
-    return <div className="pointer-events-auto absolute -top-2 left-0 right-0 h-2" aria-hidden />;
-  }
-  if (placement === 'right') {
-    return <div className="pointer-events-auto absolute -left-2 top-0 bottom-0 w-2" aria-hidden />;
-  }
-  if (placement === 'left') {
-    return <div className="pointer-events-auto absolute -right-2 top-0 bottom-0 w-2" aria-hidden />;
-  }
+  if (placement === 'top')    return <div className="pointer-events-auto absolute -bottom-2 left-0 right-0 h-2" aria-hidden />;
+  if (placement === 'bottom') return <div className="pointer-events-auto absolute -top-2 left-0 right-0 h-2" aria-hidden />;
+  if (placement === 'right')  return <div className="pointer-events-auto absolute -left-2 top-0 bottom-0 w-2" aria-hidden />;
+  if (placement === 'left')   return <div className="pointer-events-auto absolute -right-2 top-0 bottom-0 w-2" aria-hidden />;
   return null;
 }
 
@@ -54,10 +33,6 @@ function menuRowClass(minimal) {
   }`;
 }
 
-/**
- * Menu akun ringkas: hover atau klik (tanpa pindah halaman sampai pilih aksi).
- * @param {{ placement?: 'top'|'bottom'|'right'|'left', interaction?: 'hover'|'click', minimal?: boolean, children: React.ReactNode }} props
- */
 export default function ProfileHoverCard({
   placement = 'bottom',
   interaction = 'hover',
@@ -75,10 +50,7 @@ export default function ProfileHoverCard({
   const settingsHref = profile?.role === 'admin' ? `${base}/user-management` : `${base}/profile`;
 
   const clearLeave = useCallback(() => {
-    if (leaveTimer.current) {
-      clearTimeout(leaveTimer.current);
-      leaveTimer.current = null;
-    }
+    if (leaveTimer.current) { clearTimeout(leaveTimer.current); leaveTimer.current = null; }
   }, []);
 
   const onEnter = useCallback(() => {
@@ -100,31 +72,30 @@ export default function ProfileHoverCard({
 
   useEffect(() => {
     if (interaction !== 'click' || !open) return;
-    const onDoc = (e) => {
-      if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false);
-    };
-    const onKey = (e) => {
-      if (e.key === 'Escape') setOpen(false);
-    };
+    const onDoc = (e) => { if (rootRef.current && !rootRef.current.contains(e.target)) setOpen(false); };
+    const onKey = (e) => { if (e.key === 'Escape') setOpen(false); };
     document.addEventListener('mousedown', onDoc);
     document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onDoc);
-      document.removeEventListener('keydown', onKey);
-    };
+    return () => { document.removeEventListener('mousedown', onDoc); document.removeEventListener('keydown', onKey); };
   }, [interaction, open]);
 
-  const onCoarseClick = useCallback(
-    (e) => {
-      if (interaction !== 'hover') return;
-      if (typeof window === 'undefined') return;
-      if (window.matchMedia('(hover: none)').matches) {
-        e.preventDefault();
-        setOpen((v) => !v);
-      }
-    },
-    [interaction]
-  );
+  const onCoarseClick = useCallback((e) => {
+    if (interaction !== 'hover') return;
+    if (typeof window === 'undefined') return;
+    if (window.matchMedia('(hover: none)').matches) { e.preventDefault(); setOpen((v) => !v); }
+  }, [interaction]);
+
+  // Hitung posisi popup berdasarkan placement
+  const popupPositionClass = (() => {
+    switch (placement) {
+      case 'top':        return 'bottom-full left-0 mb-2';
+      case 'bottom':     return 'top-full right-0 mt-2';   // Topbar: muncul ke bawah, rata kanan
+      case 'right':      return 'left-full top-0 ml-2';
+      case 'left':       return 'right-full top-0 mr-2';
+      case 'sidebar-up': return 'bottom-full left-0 mb-2'; // Sidebar: muncul ke atas
+      default:           return 'top-full right-0 mt-2';
+    }
+  })();
 
   return (
     <div
@@ -138,26 +109,21 @@ export default function ProfileHoverCard({
         role={interaction === 'click' ? 'button' : undefined}
         tabIndex={interaction === 'click' ? 0 : undefined}
         onClick={interaction === 'click' ? (e) => { e.stopPropagation(); toggle(); } : undefined}
-        onKeyDown={
-          interaction === 'click'
-            ? (e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  toggle();
-                }
-              }
-            : undefined
-        }
+        onKeyDown={interaction === 'click' ? (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(); }
+        } : undefined}
         className={interaction === 'click' ? 'cursor-pointer outline-none' : ''}
       >
         {children}
       </div>
 
-      {open ? (
+      {open && (
         <div
-          className={`absolute z-[80] overflow-hidden border border-slate-200/90 bg-white shadow-lg ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 ${
-            minimal ? 'w-52 rounded-xl py-1.5 shadow-slate-900/10' : 'w-[min(calc(100vw-24px),280px)] min-w-[248px] rounded-2xl py-2 shadow-slate-900/12'
-          } ${placementClass[placement]}`}
+          className={`absolute z-[300] overflow-hidden border border-slate-200/90 bg-white shadow-lg ring-1 ring-slate-900/5 animate-in fade-in zoom-in-95 duration-150 ${
+            minimal
+              ? 'w-52 rounded-xl py-1.5 shadow-slate-900/10'
+              : 'w-[min(calc(100vw-24px),280px)] min-w-[248px] rounded-2xl py-2 shadow-slate-900/12'
+          } ${popupPositionClass}`}
           role="menu"
           aria-label="Menu akun"
           onClick={(e) => e.stopPropagation()}
@@ -203,10 +169,7 @@ export default function ProfileHoverCard({
                 type="button"
                 role="menuitem"
                 className={`${menuRowClass(minimal)} w-full text-red-600 hover:bg-red-50 hover:text-red-700`}
-                onClick={() => {
-                  setOpen(false);
-                  logout();
-                }}
+                onClick={() => { setOpen(false); logout(); }}
               >
                 <LogOut className="h-4 w-4 shrink-0" />
                 Keluar
@@ -214,7 +177,7 @@ export default function ProfileHoverCard({
             </div>
           )}
         </div>
-      ) : null}
+      )}
     </div>
   );
 }

@@ -78,7 +78,7 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
     const showLabel = !isCollapsed || isMobile;
 
     return (
-      <div className="flex h-full flex-col overflow-hidden border-r border-slate-200 bg-white">
+      <div className="flex h-full flex-col border-r border-slate-200 bg-white">
 
         {/* ── logo header ─────────────────────────────────────────── */}
         <div className={`flex min-h-[68px] shrink-0 items-center border-b border-slate-100 ${
@@ -183,10 +183,10 @@ export default function Sidebar({ mobileOpen, onMobileClose }) {
         )}
 
         {/* ── footer (profile + sign out) ─────────────────────────── */}
-        <div className="shrink-0 space-y-1 border-t border-slate-100 bg-slate-50/60 p-3">
+        <div className="shrink-0 space-y-1 border-t border-slate-100 bg-slate-50/60 p-3 relative overflow-visible">
 
           {profile && (
-            <ProfileHoverCard placement="right" minimal>
+            <ProfileHoverCard placement="sidebar-up" minimal>
               <div className={`group flex cursor-pointer items-center rounded-xl border border-transparent transition-all duration-200 hover:border-slate-200 hover:bg-white hover:shadow-sm ${
                 isCollapsed && !isMobile ? 'justify-center p-2' : 'gap-3 px-3 py-2.5'
               }`}>
