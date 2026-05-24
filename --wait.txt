@@ -1,0 +1,40 @@
+feat: staff assignment email notification & capacity management
+
+- Add email notification to staff on task assignment (Nodemailer)
+  → app/api/send-email/route.js (new)
+
+- Add per-staff max_load capacity with preset options (50/100/500/1000)
+  → app/api/update-user-meta/route.js (new)
+  → app/dashboard/admin/user-management/page.jsx
+  → database: ALTER TABLE profiles ADD COLUMN max_load integer DEFAULT 10
+
+- Fix role change not syncing to auth.users
+  → app/dashboard/admin/user-management/page.jsx
+
+- Fix assigned count & capacity bar not updating in user management
+  → app/dashboard/admin/user-management/page.jsx
+
+- Add unassign checklist & unassign all in StaffDrawer
+  → components/staff/StaffDrawer.jsx
+
+- Add assign level filter (High/Medium/Low) in auto-assign confirm banner
+  → app/dashboard/admin/staf-view/page.jsx
+  → components/staff/StaffDrawer.jsx
+
+- Update risk threshold: High>=70, Medium>=30, Low<30
+  → app/dashboard/admin/staf-view/page.jsx
+  → components/staff/StaffDrawer.jsx
+  → app/dashboard/admin/customer/page.jsx
+  → app/dashboard/admin/customer/[id]/page.jsx
+  → app/api/send-email/route.js
+
+- Fix revenue at risk & risk filter using normalized risk level
+  (accepts both Tinggi/Sedang/Rendah and High/Medium/Low from DB)
+  → app/dashboard/admin/customer/page.jsx
+
+- Fix profile popup clipped in sidebar & topbar
+  → components/profile/ProfileHoverCard.jsx
+  → components/Sidebar.jsx
+
+- Update last_login only on SIGNED_IN event, not on page refresh
+  → lib/hooks/useAuth.js

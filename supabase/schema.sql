@@ -1,0 +1,132 @@
+
+CREATE TABLE public.activities (
+  id integer NOT NULL DEFAULT nextval('activities_id_seq'::regclass),
+  staff_id uuid NOT NULL,
+  customer_id text NOT NULL,
+  action_type text NOT NULL CHECK (action_type = ANY (ARRAY['call'::text, 'email'::text, 'meeting'::text, 'note'::text, 'other'::text])),
+  description text NOT NULL,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT activities_pkey PRIMARY KEY (id),
+  CONSTRAINT activities_staff_id_fkey FOREIGN KEY (staff_id) REFERENCES public.profiles(id),
+  CONSTRAINT activities_customer_id_fkey FOREIGN KEY (customer_id) REFERENCES public.customers(customer_id)
+);
+CREATE TABLE public.chat_messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  sender_id uuid NOT NULL,
+  receiver_id uuid,
+  message text NOT NULL,
+  is_read boolean DEFAULT false,
+  created_at timestamp with time zone NOT NULL DEFAULT timezone('utc'::text, now()),
+  CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_messages_sender_id_fkey FOREIGN KEY (sender_id) REFERENCES public.profiles(id),
+  CONSTRAINT chat_messages_receiver_id_fkey FOREIGN KEY (receiver_id) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.churn_predictions (
+  customer_id text,
+  plan_type text,
+  total_users double precision,
+  monthly_usage_hrs double precision,
+  avg_payment double precision,
+  total_dunning double precision,
+  total_tickets double precision,
+  unresolved_tickets double precision,
+  avg_nps_score double precision,
+  churn_score double precision,
+  risk_level text
+);
+CREATE TABLE public.customers (
+  id integer NOT NULL DEFAULT nextval('customers_id_seq'::regclass),
+  customer_id text NOT NULL UNIQUE,
+  company_name text,
+  plan_type text,
+  contract_type text,
+  customer_type text,
+  tenure_months numeric,
+  total_payment_value numeric,
+  mrr numeric,
+  total_dunning integer,
+  avg_payment_delay numeric,
+  days_since_login integer,
+  avg_nps_score numeric,
+  total_tickets integer,
+  avg_severity numeric,
+  severe_ticket_ratio numeric,
+  avg_usage_hrs numeric,
+  usage_per_user numeric,
+  avg_feature_adoption numeric,
+  churn_actual boolean,
+  churn_score numeric,
+  risk_level text,
+  prioritas integer,
+  assigned_to uuid,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT customers_pkey PRIMARY KEY (id),
+  CONSTRAINT customers_assigned_to_fkey FOREIGN KEY (assigned_to) REFERENCES public.profiles(id)
+);
+CREATE TABLE public.feature_importance (
+  id integer NOT NULL DEFAULT nextval('feature_importance_id_seq'::regclass),
+  model_history_id integer NOT NULL,
+  feature_name text NOT NULL,
+  importance_score numeric NOT NULL,
+  CONSTRAINT feature_importance_pkey PRIMARY KEY (id),
+  CONSTRAINT feature_importance_model_history_id_fkey FOREIGN KEY (model_history_id) REFERENCES public.model_history(id)
+);
+CREATE TABLE public.model_history (
+  id integer NOT NULL DEFAULT nextval('model_history_id_seq'::regclass),
+  tanggal timestamp with time zone NOT NULL,
+  algoritma text NOT NULL,
+  akurasi numeric,
+  auc_roc numeric,
+  precision_churn numeric,
+  recall_churn numeric,
+  f1_score numeric,
+  status text NOT NULL DEFAULT 'Tidak Aktif'::text CHECK (status = ANY (ARRAY['Aktif'::text, 'Tidak Aktif'::text])),
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  processed_by text,
+  CONSTRAINT model_history_pkey PRIMARY KEY (id)
+);
+CREATE TABLE public.prediction_history (
+  id integer NOT NULL DEFAULT nextval('prediction_history_id_seq'::regclass),
+  model_history_id integer NOT NULL,
+  customer_id text NOT NULL,
+  company_name text,
+  plan_type text,
+  contract_type text,
+  customer_type text,
+  tenure_months numeric,
+  total_payment_value numeric,
+  mrr numeric,
+  total_dunning integer,
+  avg_payment_delay numeric,
+  days_since_login integer,
+  avg_nps_score numeric,
+  total_tickets integer,
+  avg_severity numeric,
+  severe_ticket_ratio numeric,
+  avg_usage_hrs numeric,
+  usage_per_user numeric,
+  avg_feature_adoption numeric,
+  churn_actual boolean,
+  churn_score numeric,
+  risk_level text,
+  prioritas integer,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  processed_by text,
+  CONSTRAINT prediction_history_pkey PRIMARY KEY (id),
+  CONSTRAINT prediction_history_model_history_id_fkey FOREIGN KEY (model_history_id) REFERENCES public.model_history(id)
+);
+CREATE TABLE public.profiles (
+  id uuid NOT NULL,
+  email text NOT NULL,
+  full_name text NOT NULL,
+  role text NOT NULL DEFAULT 'staff'::text CHECK (role = ANY (ARRAY['admin'::text, 'staff'::text])),
+  avatar_url text,
+  is_active boolean NOT NULL DEFAULT true,
+  last_login timestamp with time zone,
+  assigned_count integer DEFAULT 0,
+  created_at timestamp with time zone NOT NULL DEFAULT now(),
+  updated_at timestamp with time zone NOT NULL DEFAULT now(),
+  CONSTRAINT profiles_pkey PRIMARY KEY (id),
+  CONSTRAINT profiles_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);

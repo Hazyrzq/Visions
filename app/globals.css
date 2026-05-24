@@ -1,0 +1,253 @@
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Visions Design Tokens (White/Blue) ───────────────────────────── */
+:root {
+  /* Background */
+  --vs-bg:        #F0F7FF;
+  --vs-bg-2:      #E8F0FE;
+  --vs-surface:   #FFFFFF;
+
+  /* Dashboard canvas — kontras lembut dengan panel putih */
+  --vs-dash-canvas:       #E4E9F2;
+  --vs-dash-canvas-soft: #EEF2F8;
+  /* Sidebar rail (logip-style light column) */
+  --vs-sidebar-rail-bg:     #F3F4F6;
+  --vs-sidebar-rail-border: rgba(15, 23, 42, 0.06);
+  --vs-sidebar-light-bg:  #FFFFFF;
+  --vs-sidebar-light-line: #E8ECF2;
+  --vs-sidebar-muted:     #64748B;
+  --vs-sidebar-ink:       #0F172A;
+
+  /* Text */
+  --vs-ink:       #0F172A;
+  --vs-ink-2:     #1E293B;
+  --vs-muted:     #475569;
+  --vs-muted-2:   #64748B;
+  --vs-muted-3:   #94A3B8;
+
+  /* Border */
+  --vs-line:      #DBEAFE;
+  --vs-line-2:    #BFDBFE;
+  --vs-line-soft: #EFF6FF;
+
+  /* Brand (Blue) */
+  --vs-brand:     #2563EB;
+  --vs-brand-50:  #EFF6FF;
+  --vs-brand-100: #DBEAFE;
+  --vs-brand-200: #BFDBFE;
+  --vs-brand-light: rgba(37,99,235,0.08);
+
+  /* Semantic */
+  --vs-success:   #10B981;
+  --vs-warn:      #F59E0B;
+  --vs-danger:    #EF4444;
+
+  /* Shadow */
+  --vs-shadow-xs: 0 1px 3px rgba(15,23,42,0.06);
+  --vs-shadow-sm: 0 2px 8px rgba(15,23,42,0.08);
+  --vs-shadow-md: 0 4px 16px rgba(15,23,42,0.10);
+
+  /* Sidebar */
+  --vs-sidebar-bg:    #0F172A;
+  --vs-sidebar-line:  rgba(255,255,255,0.06);
+
+  /* shadcn compat */
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.546 0.245 262.881);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * { box-sizing: border-box; border-color: var(--border); }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+}
+
+/* ── Visions Component Classes (pakai di semua halaman) ────────────── */
+@layer components {
+  /* Card — panel dashboard baru */
+  .vs-card {
+    background: var(--vs-surface);
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    border-radius: 20px;
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 16px 48px -20px rgba(37, 99, 235, 0.12),
+      0 8px 24px -16px rgba(15, 23, 42, 0.08);
+  }
+
+  /* Workspace: lembaran putih utama di atas canvas */
+  .vs-workspace {
+    border-radius: 28px;
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    background: linear-gradient(165deg, #ffffff 0%, #fbfcff 55%, #f8fafc 100%);
+    box-shadow:
+      0 1px 2px rgba(15, 23, 42, 0.04),
+      0 24px 64px -28px rgba(37, 99, 235, 0.18),
+      0 12px 32px -20px rgba(15, 23, 42, 0.1);
+  }
+
+  /* Badge / Tag */
+  .vs-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    border: 1px solid transparent;
+  }
+  .vs-tag--high    { background: #FEF2F2; color: #DC2626; border-color: #FCA5A5; }
+  .vs-tag--medium  { background: #FFFBEB; color: #D97706; border-color: #FCD34D; }
+  .vs-tag--low     { background: #F0FDF4; color: #16A34A; border-color: #86EFAC; }
+  .vs-tag--blue    { background: var(--vs-brand-50); color: var(--vs-brand); border-color: var(--vs-brand-100); }
+
+  /* Page header */
+  .vs-page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 1.5rem;
+  }
+  .vs-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--vs-ink);
+  }
+  .vs-page-sub {
+    font-size: 13.5px;
+    color: var(--vs-muted-2);
+  }
+
+  /* Input */
+  .vs-input {
+    width: 100%;
+    background: var(--vs-surface);
+    border: 1px solid var(--vs-line);
+    border-radius: 8px;
+    font-size: 13px;
+    color: var(--vs-ink);
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  .vs-input:focus { border-color: var(--vs-brand-200); box-shadow: 0 0 0 2px var(--vs-brand-light); }
+  .vs-input::placeholder { color: var(--vs-muted-3); }
+  .vs-input:disabled { background: var(--vs-bg-2); color: var(--vs-muted-3); cursor: not-allowed; }
+
+  /* Buttons */
+  .vs-btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    font-size: 13px; font-weight: 500; padding: 8px 16px; border-radius: 8px;
+    transition: all 0.2s ease; cursor: pointer;
+  }
+  .vs-btn:disabled { opacity: 0.65; cursor: not-allowed; }
+  .vs-btn--primary {
+    color: #fff; background: var(--vs-brand); border: 1px solid var(--vs-brand);
+    box-shadow: 0 1px 3px rgba(37,99,235,0.25);
+  }
+  .vs-btn--primary:hover:not(:disabled) { background: #1d4ed8; transform: translateY(-0.5px); }
+  .vs-btn--ghost {
+    color: var(--vs-ink); background: var(--vs-surface); border: 1px solid var(--vs-line);
+  }
+  .vs-btn--ghost:hover:not(:disabled) { background: var(--vs-bg-2); border-color: var(--vs-line-2); }
+  .vs-btn--secondary {
+    color: var(--vs-ink); background: var(--vs-surface); border: 1px solid var(--vs-line);
+    box-shadow: var(--vs-shadow-xs);
+  }
+  .vs-btn--secondary:hover:not(:disabled) { background: var(--vs-bg-2); border-color: var(--vs-line-2); }
+
+  /* Toggle */
+  .vs-toggle {
+    position: relative; width: 36px; height: 20px; border-radius: 999px;
+    transition: background 0.2s ease; cursor: pointer; flex-shrink: 0;
+  }
+  .vs-toggle[data-state="true"]  { background: var(--vs-brand); }
+  .vs-toggle[data-state="false"] { background: var(--vs-line); }
+  .vs-toggle-thumb {
+    position: absolute; top: 2px; left: 2px; width: 16px; height: 16px;
+    background: #fff; border-radius: 999px; box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .vs-toggle[data-state="true"] .vs-toggle-thumb { transform: translateX(16px); }
+
+  /* Pulse dot */
+  .vs-pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--vs-success);
+    box-shadow: 0 0 0 0 rgba(16,185,129,0.4);
+    animation: vsPulse 2.4s infinite;
+  }
+
+  /* Sidebar item */
+  .sidebar-item {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150;
+  }
+}
+
+@layer utilities {
+  /* Scrollbar */
+  .sidebar-scroll::-webkit-scrollbar { width: 3px; }
+  .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+
+  .sidebar-scroll-light::-webkit-scrollbar { width: 4px; }
+  .sidebar-scroll-light::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-scroll-light::-webkit-scrollbar-thumb { background: rgba(15, 23, 42, 0.12); border-radius: 4px; }
+
+  /* Gradient text (blue) */
+  .gradient-text {
+    background: linear-gradient(135deg, #2563EB 0%, #3B82F6 50%, #60A5FA 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Dot pattern */
+  .dot-pattern {
+    background-image: radial-gradient(rgba(37,99,235,0.07) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+/* ── Keyframes ──────────────────────────────────────────────────────── */
+@keyframes vsPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(16,185,129,.4); }
+  70%  { box-shadow: 0 0 0 6px rgba(16,185,129,0); }
+  100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); }
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Reduced motion ────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
