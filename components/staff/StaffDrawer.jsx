@@ -115,6 +115,8 @@ export default function StaffDrawer({
   const [saving, setSaving]                       = useState(false);
   const [autoAssigning, setAutoAssigning]         = useState(false);
   const [activeTargetId, setActiveTargetId]       = useState(null);
+  const [riskFilterAssigned, setRiskFilterAssigned] = useState('Semua');
+  const [sortByAssigned, setSortByAssigned]       = useState('churn_score');
 
   useEffect(() => setMounted(true), []);
 
@@ -126,6 +128,8 @@ export default function StaffDrawer({
       setUnassignMode(false);
       setSelectedUnassign([]);
       setActiveTargetId(bulkTargets?.[0]?.id ?? null);
+      setRiskFilterAssigned('Semua');
+      setSortByAssigned('churn_score');
     }
   }, [open, staff?.id, bulkTargets]);
 
@@ -158,6 +162,32 @@ export default function StaffDrawer({
     (c.customer_id  ?? '').toLowerCase().includes(search.toLowerCase())
   );
 
+  // Filter & Sort for "Ditugaskan" tab
+  const normalizeRisk = (lvl) => {
+    if (!lvl) return 'Low';
+    const v = lvl.trim();
+    if (v === 'Tinggi' || v === 'High')   return 'High';
+    if (v === 'Sedang' || v === 'Medium') return 'Medium';
+    return 'Low';
+  };
+
+  let filteredAssigned = assignedCustomers;
+  if (riskFilterAssigned !== 'Semua') {
+    filteredAssigned = filteredAssigned.filter(c => normalizeRisk(c.risk_level) === riskFilterAssigned);
+  }
+
+  // Sort
+  if (sortByAssigned === 'churn_score') {
+    filteredAssigned = [...filteredAssigned].sort((a, b) => (b.churn_score ?? 0) - (a.churn_score ?? 0));
+  } else if (sortByAssigned === 'risk_level') {
+    const riskOrder = { 'High': 0, 'Medium': 1, 'Low': 2 };
+    filteredAssigned = [...filteredAssigned].sort((a, b) => {
+      const aRisk = riskOrder[normalizeRisk(a.risk_level)] ?? 2;
+      const bRisk = riskOrder[normalizeRisk(b.risk_level)] ?? 2;
+      return aRisk - bRisk;
+    });
+  }
+
   const wl        = assignedCustomers.length;
   const overloaded = wl >= staffMaxLoad;
   const remaining  = Math.max(0, staffMaxLoad - wl);
@@ -180,7 +210,7 @@ export default function StaffDrawer({
     setSelectedUnassign(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
 
   const toggleAllUnassign = () => {
-    const ids = assignedCustomers.map(c => c.id);
+    const ids = filteredAssigned.map(c => c.id);
     const allSel = ids.every(id => selectedUnassign.includes(id));
     setSelectedUnassign(allSel ? [] : ids);
   };
@@ -301,7 +331,7 @@ export default function StaffDrawer({
   };
 
   const allFilteredSelected  = filteredUnassigned.length > 0 && filteredUnassigned.every(c => selectedCustomers.includes(c.id));
-  const allUnassignSelected  = assignedCustomers.length > 0 && assignedCustomers.every(c => selectedUnassign.includes(c.id));
+  const allUnassignSelected  = filteredAssigned.length > 0 && filteredAssigned.every(c => selectedUnassign.includes(c.id));
   const activeTargetStaff    = isBulk ? targets.find(s => s.id === activeTargetId) : null;
   const activeTargetMaxLoad  = activeTargetStaff?.max_load ?? 10;
   const activeTargetLoad     = activeTargetId ? (currentLoads[activeTargetId] ?? 0) : 0;
@@ -472,9 +502,48 @@ export default function StaffDrawer({
                     )}
                   </div>
 
+                  {/* Filter & Sort Bar */}
+                  {!unassignMode && (
+                    <div className="shrink-0 border-b border-slate-100 px-5 py-3 space-y-2">
+                      {/* Risk Filter */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-semibold text-slate-400 uppercase">Risiko:</span>
+                        {['Semua', 'High', 'Medium', 'Low'].map(risk => (
+                          <button key={risk}
+                            onClick={() => setRiskFilterAssigned(risk)}
+                            className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-all border ${
+                              riskFilterAssigned === risk
+                                ? 'bg-slate-900 text-white border-slate-900'
+                                : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                            }`}>
+                            {risk === 'High' ? '🔴' : risk === 'Medium' ? '🟡' : risk === 'Low' ? '🟢' : ''}
+                            {risk}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* Sort Dropdown */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[11px] font-semibold text-slate-400 uppercase">Sort:</span>
+                        <select 
+                          value={sortByAssigned}
+                          onChange={(e) => setSortByAssigned(e.target.value)}
+                          className="rounded-lg border border-slate-200 bg-white px-3 py-1 text-[11px] font-semibold text-slate-600 hover:border-slate-400 cursor-pointer">
+                          <option value="churn_score">Churn Score (↓)</option>
+                          <option value="risk_level">Risk Level</option>
+                        </select>
+                      </div>
+
+                      {/* Result count */}
+                      <div className="text-[11px] text-slate-400">
+                        {filteredAssigned.length} dari {assignedCustomers.length} ditampilkan
+                      </div>
+                    </div>
+                  )}
+
                   {/* List */}
                   <ul className="flex-1 divide-y divide-slate-50 overflow-y-auto px-3 py-2">
-                    {assignedCustomers.map(c => (
+                    {filteredAssigned.map(c => (
                       <li key={c.id}
                         onClick={() => unassignMode && toggleUnassign(c.id)}
                         className={`flex items-center gap-3 rounded-xl px-2 py-3 transition-colors ${unassignMode ? 'cursor-pointer hover:bg-red-50/40' : ''} ${selectedUnassign.includes(c.id) ? 'bg-red-50/60' : ''}`}>
@@ -518,7 +587,7 @@ export default function StaffDrawer({
                         <button type="button" onClick={handleUnassignAll} disabled={unassigning}
                           className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 py-2.5 text-[13px] font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-40">
                           {unassigning ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-400/30 border-t-red-500" /> : <Trash2 className="h-4 w-4" />}
-                          Unassign Semua ({assignedCustomers.length})
+                          Unassign Semua ({filteredAssigned.length})
                         </button>
                       </motion.div>
                     )}
