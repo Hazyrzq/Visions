@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { Menu, Bell, ChevronRight } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -11,7 +11,6 @@ import { getNotifikasi } from '@/lib/churnshield';
 
 export default function Topbar({ onMenuClick }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { profile } = useAuth();
   const { crumbs } = getDashboardBreadcrumbs(pathname);
   const initials = profile?.full_name?.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() ?? '?';
@@ -74,6 +73,7 @@ export default function Topbar({ onMenuClick }) {
 
         <div className="ml-auto flex items-center gap-2">
 
+          {/* ── Notifikasi ── */}
           <Link
             href={notifHref}
             className="relative flex h-10 w-10 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100"

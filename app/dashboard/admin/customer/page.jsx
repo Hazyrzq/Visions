@@ -1,5 +1,6 @@
 'use client';
 
+import { useLang } from '@/lib/i18n/LanguageContext';
 import { Suspense, useEffect, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Trash2, Users, Search, AlertTriangle, Activity, ChevronLeft, ChevronRight, TrendingDown, X, Download } from 'lucide-react';
@@ -22,6 +23,7 @@ function AdminCustomerInner() {
   const router = useRouter();
 
   const { profile } = useAuth();
+  const { t, lang } = useLang();
   const { toasts, toast, remove } = useToast();
   const confirm = useConfirm();
 
@@ -200,7 +202,7 @@ function AdminCustomerInner() {
 
   return (
     <DashboardShell
-      title="Pelanggan"
+      title={t('data.title')}
       description="Pantau seluruh pelanggan, kelola risiko churn, dan awasi MRR mereka."
       icon={Users}
       actions={(
@@ -241,7 +243,7 @@ function AdminCustomerInner() {
             <div className="text-2xl lg:text-3xl font-bold text-red-600 truncate" title={formatCurrency(revenueAtRisk)}>
               {loading ? '-' : formatCurrency(revenueAtRisk)}
             </div>
-            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Revenue at Risk</div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Pendapatan Berisiko</div>
           </motion.div>
 
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.19, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
@@ -265,7 +267,7 @@ function AdminCustomerInner() {
             <div className="text-2xl lg:text-3xl font-bold text-amber-600">
               {loading ? '-' : `${avgChurnScore}%`}
             </div>
-            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Avg. Churn Score</div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Rata-rata Skor Churn</div>
           </motion.div>
         </div>
 
@@ -287,7 +289,7 @@ function AdminCustomerInner() {
           {/* Risk pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Risiko</span>
-            {['Semua', 'High', 'Medium', 'Low'].map((r) => {
+            {['Semua', 'Tinggi', 'Sedang', 'Rendah'].map((r) => {
               const active = riskFilter === r;
               const dot = r === 'High' ? 'bg-red-500' : r === 'Medium' ? 'bg-amber-500' : r === 'Low' ? 'bg-emerald-500' : null;
               return (
@@ -354,7 +356,7 @@ function AdminCustomerInner() {
                           onChange={toggleAll}
                         />
                       </th>
-                      {['Pelanggan', 'Tipe', 'Paket', 'MRR', 'Churn Score', 'Risk Level', 'Assigned', 'Aksi'].map((h) => (
+                      {['Pelanggan', 'Tipe', 'Paket', 'MRR', 'Skor Churn', 'Tingkat Risiko', 'Ditugaskan', 'Aksi'].map((h) => (
                         <th key={h} className="whitespace-nowrap px-3 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">
                           {h}
                         </th>
@@ -418,7 +420,7 @@ function AdminCustomerInner() {
                                 <span className="truncate max-w-[90px]">{c.staff.full_name}</span>
                               </div>
                             ) : (
-                              <span className="italic text-[var(--vs-muted-3)]">Unassigned</span>
+                              <span className="italic text-[var(--vs-muted-3)]">Belum Ditugaskan</span>
                             )}
                           </td>
                           <td className="px-3 py-3.5">

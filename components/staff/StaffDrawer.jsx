@@ -1,5 +1,9 @@
 'use client';
 
+// Belom terlalu panjang
+
+import { useLang } from '@/lib/i18n/LanguageContext';
+
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -76,8 +80,10 @@ async function distributeToStaff(customerList, targetStaff, currentLoads, adminN
       .in('id', s.customerIds);
 
     addNotifikasi({
-      title: `${s.customerIds.length} pelanggan baru di-assign ke Anda`,
-      message: `${adminName ? adminName + ' telah' : 'Admin'} menugaskan ${s.customerIds.length} pelanggan kepada Anda. Segera tindak lanjuti.`,
+      title: t('staffDrawer.notifTitle', { count: s.customerIds.length }),
+      message: adminName
+        ? t('staffDrawer.notifMsgAdmin', { adminName: adminName, count: s.customerIds.length })
+        : t('staffDrawer.notifMsgSystem', { count: s.customerIds.length }),
       type: 'assign',
       recipient_id: s.id,
     }).catch(() => {});
@@ -105,18 +111,19 @@ export default function StaffDrawer({
   toast,
   adminName = '',
 }) {
-  const [mounted, setMounted]                     = useState(false);
-  const [tab, setTab]                             = useState('assigned');
-  const [search, setSearch]                       = useState('');
-  const [selectedCustomers, setSelectedCustomers] = useState([]);
-  const [unassignMode, setUnassignMode]           = useState(false);
-  const [selectedUnassign, setSelectedUnassign]   = useState([]);
-  const [unassigning, setUnassigning]             = useState(false);
-  const [saving, setSaving]                       = useState(false);
-  const [autoAssigning, setAutoAssigning]         = useState(false);
-  const [activeTargetId, setActiveTargetId]       = useState(null);
-  const [riskFilterAssigned, setRiskFilterAssigned] = useState('Semua');
-  const [sortByAssigned, setSortByAssigned]       = useState('churn_score');
+  const { t, lang }                                 = useLang();
+  const [mounted, setMounted]                       = useState(false);
+  const [tab, setTab]                               = useState('assigned');
+  const [search, setSearch]                         = useState('');
+  const [selectedCustomers, setSelectedCustomers]   = useState([]);
+  const [unassignMode, setUnassignMode]             = useState(false);
+  const [selectedUnassign, setSelectedUnassign]     = useState([]);
+  const [unassigning, setUnassigning]               = useState(false);
+  const [saving, setSaving]                         = useState(false);
+  const [autoAssigning, setAutoAssigning]           = useState(false);
+  const [activeTargetId, setActiveTargetId]         = useState(null);
+  const [riskFilterAssigned, setRiskFilterAssigned] = useState('All');
+  const [sortByAssigned, setSortByAssigned]         = useState('churn_score');
 
   useEffect(() => setMounted(true), []);
 
@@ -128,7 +135,7 @@ export default function StaffDrawer({
       setUnassignMode(false);
       setSelectedUnassign([]);
       setActiveTargetId(bulkTargets?.[0]?.id ?? null);
-      setRiskFilterAssigned('Semua');
+      setRiskFilterAssigned('All');
       setSortByAssigned('churn_score');
     }
   }, [open, staff?.id, bulkTargets]);
@@ -413,7 +420,7 @@ export default function StaffDrawer({
                   </span>
                   <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${overloaded ? 'bg-red-50 text-red-700' : 'bg-emerald-50 text-emerald-700'}`}>
                     <Activity className="mr-1 inline h-3 w-3" />
-                    {overloaded ? 'Kapasitas Penuh' : 'Kapasitas Normal'}
+                    {overloaded ? t('staffView.full') : t('staffView.normal')}
                   </span>
                   {staff.email && <span className="text-[11px] text-slate-400">{staff.email}</span>}
                 </div>
@@ -421,9 +428,9 @@ export default function StaffDrawer({
             </div>
             <div className="mt-4">
               <div className="mb-1 flex justify-between text-[11px] text-slate-400">
-                <span>Beban kerja</span>
+                <span>{t('staffView.workload')}</span>
                 <span className={wl >= staffMaxLoad ? 'font-semibold text-red-500' : ''}>
-                  {wl} / {staffMaxLoad} kapasitas
+                  {wl} / {staffMaxLoad} {t('staffView.capacity')}
                   {remaining > 0 && <span className="ml-1 text-emerald-600">(sisa {remaining})</span>}
                 </span>
               </div>
@@ -442,8 +449,8 @@ export default function StaffDrawer({
         {!isBulk && (
           <div className="flex shrink-0 border-b border-slate-100 px-5">
             {[
-              { key: 'assigned', label: `Ditugaskan (${wl})` },
-              { key: 'assign',   label: `Assign Pelanggan${unassignedCustomers.length > 0 ? ` · ${unassignedCustomers.length} belum` : ''}` },
+              { key: 'assigned', label: `${t('staffView.assigned')} (${wl})` },
+              { key: 'assign',   label: `${t('staffView.assignCustomer')} ${unassignedCustomers.length > 0 ? ` · ${unassignedCustomers.length} ${t('staffView.unassigned')}` : ''}` },
             ].map(({ key, label }) => (
               <button key={key} type="button"
                 onClick={() => { setTab(key); setUnassignMode(false); setSelectedUnassign([]); }}
@@ -627,7 +634,7 @@ export default function StaffDrawer({
                   <div className="space-y-2.5 border-b border-slate-100 px-5 py-3">
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <input type="text" placeholder="Cari pelanggan…" value={search}
+                      <input type="text" placeholder="{t('staffView.searchCustomer')}" value={search}
                         onChange={e => setSearch(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-[13px] outline-none focus:border-blue-400 focus:bg-white" />
                     </div>

@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LogOut, Pencil, Settings } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 const LEAVE_MS = 180;
 
@@ -14,8 +15,8 @@ function initials(name) {
 }
 
 function roleLabel(role) {
-  if (role === 'admin') return 'Administrator';
-  if (role === 'staff') return 'Staf';
+  if (role === 'admin') return t('role.admin');
+  if (role === 'staff') return t('role.staff');
   return role ?? '—';
 }
 
@@ -39,6 +40,7 @@ export default function ProfileHoverCard({
   minimal = false,
   children,
 }) {
+  const { t } = useLang()
   const pathname = usePathname();
   const { user, profile, logout } = useAuth();
   const [open, setOpen] = useState(false);
@@ -133,7 +135,7 @@ export default function ProfileHoverCard({
           {minimal ? (
             <div className="relative border-b border-slate-100 px-3 pb-2 pt-1.5 mb-1">
               <div className="min-w-0 flex-1">
-                <p className="truncate text-[13px] font-semibold text-slate-800">{profile?.full_name ?? 'Pengguna'}</p>
+                <p className="truncate text-[13px] font-semibold text-slate-800">{profile?.full_name ?? t('profileHover.defaultUser')}</p>
                 <p className="truncate text-[11px] text-slate-500 mt-0.5">{user?.email}</p>
               </div>
             </div>
@@ -155,11 +157,11 @@ export default function ProfileHoverCard({
           <nav className={`relative ${minimal ? 'px-2 py-1' : 'px-2 pt-1'}`}>
             <Link href={settingsHref} className={menuRowClass(minimal)} role="menuitem" onClick={() => setOpen(false)}>
               <Settings className="h-4 w-4 shrink-0 text-slate-400" />
-              Pengaturan
+              {t('profileHover.settings')}
             </Link>
             <Link href={profileEditHref} className={menuRowClass(minimal)} role="menuitem" onClick={() => setOpen(false)}>
               <Pencil className="h-4 w-4 shrink-0 text-slate-400" />
-              Edit profil
+              {t('profileHover.editProfile')}
             </Link>
           </nav>
 
@@ -172,7 +174,7 @@ export default function ProfileHoverCard({
                 onClick={() => { setOpen(false); logout(); }}
               >
                 <LogOut className="h-4 w-4 shrink-0" />
-                Keluar
+                {t('nav.signOut')}
               </button>
             </div>
           )}

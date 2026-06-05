@@ -1,5 +1,6 @@
 'use client';
 
+import { useLang } from '@/lib/i18n/LanguageContext';
 import { useEffect, useState } from 'react';
 import {
   Building2, Mail, Clock, AlertTriangle,
@@ -10,6 +11,8 @@ import { motion } from 'framer-motion';
 import { mockCustomers } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 import ActivityModal from '@/components/customer/ActivityModal';
+
+const { t, lang } = useLang();
 
 const activityColors = {
   Email: 'bg-[var(--vs-brand-50)] text-[var(--vs-brand)]',

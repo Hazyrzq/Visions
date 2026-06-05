@@ -1,10 +1,13 @@
 'use client';
 
+import { useLang } from '@/lib/i18n/LanguageContext';
 import { useState, useEffect } from 'react';
 import { Cpu, CheckCircle, Clock, BarChart2, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
 import DashboardShell from '@/components/dashboard/DashboardShell';
+
+const { t, lang } = useLang();
 
 const METRICS = [
   { key: 'akurasi',         label: 'Akurasi',   color: 'bg-blue-500',    track: 'bg-blue-100'    },

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { addNotifikasi } from '@/lib/churnshield';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 function riskDot(level) {
   if (level === 'Tinggi') return 'bg-red-500';
@@ -25,6 +26,7 @@ function initials(name) {
 }
 
 export default function BulkAssignModal({ open, staffList = [], customers = [], onClose, onRefresh, toast }) {
+  const { t } = useLang();
   const [mounted, setMounted] = useState(false);
   const [activeStaff, setActiveStaff] = useState(null); // null = step 1 (pilih staff)
   const [assignments, setAssignments] = useState({});   // { staffId: [customerId, ...] }
@@ -130,11 +132,11 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
           recipient_id: staffId,
         }).catch(() => {});
       }
-      toast(`${totalQueued} pelanggan berhasil di-assign.`, 'success');
+      toast(t('bulkAssign.successToast', { count: totalQueued }), 'success');
       onRefresh();
       onClose();
     } catch {
-      toast('Gagal menyimpan penugasan', 'error');
+      toast(t('bulkAssign.errorToast'), 'error');
     } finally {
       setSaving(false);
     }
@@ -166,12 +168,12 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
           )}
           <div className="flex-1 min-w-0">
             <h2 className="text-[15px] font-bold text-slate-900">
-              {activeStaff ? `Pilih pelanggan untuk ${activeStaff.full_name}` : 'Assign Manual Pelanggan'}
+              {activeStaff ? t('bulkAssign.titleStep2', { staffName: activeStaff.full_name }) : t('bulkAssign.titleStep1')}
             </h2>
             <p className="text-[11px] text-slate-500">
               {activeStaff
-                ? `${available.length} pelanggan tersedia`
-                : `${staffList.length} staf · ${unassigned.length} belum di-assign`}
+                ? t('bulkAssign.subtitleStep2', { availableCount: available.length })
+                : t('bulkAssign.subtitleStep1', { staffCount: staffList.length, unassignedCount: unassigned.length })}
             </p>
           </div>
           <button onClick={onClose}
@@ -204,9 +206,9 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
                           {s.full_name}
                         </p>
                         <p className="text-[11px] text-slate-500">
-                          {existing} pelanggan aktif
+                          {existing} {t('bulkAssign.activeCustomers')}
                           {pending > 0 && (
-                            <span className="ml-1.5 font-semibold text-emerald-600">+ {pending} ditambahkan</span>
+                            <span className="ml-1.5 font-semibold text-emerald-600">+ {pending} {t('bulkAssign.added')}</span>
                           )}
                         </p>
                       </div>
@@ -215,7 +217,7 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
                           onClick={e => { e.stopPropagation(); removeStaffQueue(s.id); }}
                           className="shrink-0 rounded-lg border border-red-100 bg-white px-2 py-1 text-[10px] font-semibold text-red-500 hover:bg-red-50 transition-colors"
                         >
-                          Hapus
+                          {t('bulkAssign.remove')}
                         </button>
                       )}
                       <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 group-hover:text-blue-400 transition-colors" />
@@ -229,19 +231,19 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
                 <button onClick={handleAutoDistribute}
                   className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-100">
                   <Sparkles className="h-4 w-4 text-amber-500" />
-                  Distribusi Otomatis
+                  {t('bulkAssign.autoDistribute')}
                 </button>
                 <div className="flex items-center gap-2">
                   <button onClick={onClose}
                     className="rounded-xl border border-slate-200 px-4 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50">
-                    Batal
+                    {t('bulkAssign.cancel')}
                   </button>
                   <button onClick={handleSave} disabled={!totalQueued || saving}
                     className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-[12px] font-semibold text-white transition hover:bg-blue-700 disabled:opacity-40">
                     {saving
                       ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                       : <UserPlus className="h-4 w-4" />}
-                    Simpan {totalQueued > 0 ? `(${totalQueued})` : ''}
+                    {t('bulkAssign.save')} {totalQueued > 0 ? `(${totalQueued})` : ''}
                   </button>
                 </div>
               </div>
@@ -258,16 +260,16 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
               <div className="shrink-0 space-y-2 border-b border-slate-100 px-4 py-3">
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                  <input type="text" placeholder="Cari pelanggan…" value={search}
+                  <input type="text" placeholder={t('bulkAssign.searchPlaceholder')} value={search}
                     onChange={e => setSearch(e.target.value)}
                     className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-[13px] outline-none focus:border-blue-400 focus:bg-white" />
                 </div>
                 <button onClick={toggleAll}
                   className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-blue-600">
                   {allSelected ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4" />}
-                  Pilih Semua ({availableForActive.length})
+                  {t('bulkAssign.selectAll')} ({availableForActive.length})
                   {selected.length > 0 && (
-                    <span className="ml-1 font-bold text-blue-600">· {selected.length} dipilih</span>
+                    <span className="ml-1 font-bold text-blue-600">· {selected.length} {t('bulkAssign.selected')}</span>
                   )}
                 </button>
               </div>
@@ -278,7 +280,7 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
                   <div className="flex flex-col items-center justify-center py-16 text-center">
                     <Users className="mb-2 h-9 w-9 text-slate-200" />
                     <p className="text-[12px] text-slate-400">
-                      {available.length === 0 ? 'Semua pelanggan sudah masuk antrian' : `Tidak ada hasil untuk "${search}"`}
+                      {available.length === 0 ? t('bulkAssign.allQueued') : t('bulkAssign.noResult', { search })}
                     </p>
                   </div>
                 ) : availableForActive.map(c => {
@@ -308,14 +310,14 @@ export default function BulkAssignModal({ open, staffList = [], customers = [], 
               <div className="shrink-0 flex items-center justify-between border-t border-slate-100 bg-slate-50/50 px-5 py-3">
                 <button onClick={backToStaff}
                   className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[12px] font-semibold text-slate-600 transition hover:bg-slate-50">
-                  <ArrowLeft className="h-4 w-4" /> Kembali
+                  <ArrowLeft className="h-4 w-4" /> {t('bulkAssign.back')}
                 </button>
                 <button onClick={handleAssign} disabled={!selected.length}
                   className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-[12px] font-semibold text-white transition hover:bg-blue-700 disabled:opacity-40">
                   <UserPlus className="h-4 w-4" />
                   {selected.length > 0
-                    ? `Assign ${selected.length} ke ${activeStaff.full_name}`
-                    : 'Pilih pelanggan dulu'}
+                    ? t('bulkAssign.assignTo', { count: selected.length, staffName: activeStaff.full_name })
+                    : t('bulkAssign.selectFirst')}
                 </button>
               </div>
             </motion.div>

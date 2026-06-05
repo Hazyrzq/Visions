@@ -1,5 +1,7 @@
 'use client';
 
+// belum sempuran
+
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -10,6 +12,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { Input } from '@/components/ui/input';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 function initials(name) {
   if (!name) return '?';
@@ -23,8 +26,8 @@ function initials(name) {
 }
 
 function roleBadgeLabel(role) {
-  if (role === 'admin') return 'Administrator';
-  if (role === 'staff') return 'Staf';
+  if (role === 'admin') return t('role.admin');
+  if (role === 'staff') return t('role.staff');
   return role ?? '—';
 }
 
@@ -32,6 +35,7 @@ function roleBadgeLabel(role) {
  * @param {{ dashboardHome: string }} props
  */
 function ProfileWorkspaceContent({ dashboardHome }) {
+  const { t } = useLang();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -78,7 +82,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
     await refreshProfile();
     setEditing(false);
     clearEditQuery();
-    toast('Profil diperbarui', 'success');
+    toast(t('profileWorkspace.updateSuccess'), t('common.success'));
   };
 
   const handleCancel = () => {
@@ -142,7 +146,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                   className="inline-flex items-center gap-1.5 rounded-full bg-[var(--vs-brand)] px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
                 >
                   <Check className="h-3.5 w-3.5" />
-                  {saving ? 'Menyimpan…' : 'Simpan'}
+                  {saving ? 'Menyimpan…' : t('common.save')}
                 </button>
               </div>
             )}
@@ -154,7 +158,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                 <User className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">Nama lengkap</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">{t('profileWorkspace.fullName')}</p>
                 {editing ? (
                   <Input
                     value={fullName}
@@ -177,7 +181,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">Email</p>
                 <p className="mt-1.5 break-all text-[14px] font-medium text-[var(--vs-ink)]">{user?.email ?? '—'}</p>
                 <p className="mt-1 text-[11px] leading-relaxed text-[var(--vs-muted-3)]">
-                  Email diatur lewat autentikasi. Hubungi admin jika perlu diubah.
+                  {t('profileWorkspace.emailInfo')}
                 </p>
               </div>
             </div>
@@ -187,7 +191,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                 <Shield className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">Peran</p>
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">{t('profileWorkspace.emailInfo')}</p>
                 <p className="mt-1.5 text-[14px] font-semibold text-[var(--vs-ink)]">{roleBadgeLabel(profile?.role)}</p>
               </div>
             </div>
