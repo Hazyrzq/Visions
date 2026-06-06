@@ -110,7 +110,8 @@
     "unread": "belum dibaca",
     "allRead": "Semua notifikasi sudah dibaca",
     "confirmTitle": "Konfirmasi",
-    "confirmMessage": "Apakah Anda yakin?"
+    "confirmMessage": "Apakah Anda yakin?",
+    "closePanel": "Tutup panel"
   },
   "chatBot": {
     "title": "ChurnShield AI",
@@ -184,7 +185,8 @@
     "supportQuality":"Kualitas Layanan & Support",
     "aiAnalysis":"AI Churn Analysis",
     "rawData":"Semua Parameter ML (Raw Data)",
-    "activityLog":"Log Aktivitas Admin"
+    "activityLog":"Log Aktivitas Admin",
+    "drawerTitle": "Detail pelanggan"
   },
   "staffDrawer": {
     "notifTitle": "{{count}} pelanggan baru di-assign ke Anda",
@@ -203,7 +205,8 @@
   "profileWorkspace": {
     "emailInfo": "Email diatur lewat autentikasi. Hubungi admin jika perlu diubah.",
     "roleLabel": "Peran",
-    "fullName": "Nama Lengkap"
+    "fullName": "Nama Lengkap",
+    "role": "Peran"
   },
   "hero": {
     "dashboard": "Dasbor",
@@ -257,5 +260,27 @@
     "criticalHeader": "🚨 **{{count}} Pelanggan Kritis Belum Di-assign:**",
     "criticalFooter": "Segera assign dan hubungi pelanggan ini!",
     "customers": "pelanggan"
+  },
+  "activity": {
+    "title": "Catat Aktivitas",
+    "typeLabel": "Jenis Aktivitas",
+    "notesLabel": "Catatan / Hasil Follow-up",
+    "notesPlaceholder": "Contoh: Menghubungi pelanggan untuk menawarkan diskon perpanjangan...",
+    "save": "Simpan Aktivitas",
+    "type": {
+      "email": "Email",
+      "call": "Call",
+      "meeting": "Meeting",
+      "note": "Note"
+    }
+  },
+  "customerModal": {
+    "title": "Detail Pelanggan",
+    "plan": "Plan",
+    "featureAdoption": "Feature Adoption",
+    "assignedTo": "Assigned ke",
+    "unassigned": "Belum diassign",
+    "riskIndicator": "Indikator Risiko",
+    "recommendation": "Rekomendasi Tindakan"
   }
 }

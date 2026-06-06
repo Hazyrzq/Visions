@@ -104,7 +104,8 @@
     "unread": "unread",
     "allRead": "All notifications are read",
     "confirmTitle": "Confirm",
-    "confirmMessage": "Are you sure?"
+    "confirmMessage": "Are you sure?",
+    "closePanel": "Close panel"
   },
   "chatBot": {
     "title": "ChurnShield AI",
@@ -178,7 +179,8 @@
     "supportQuality":"Service Quality & Support",
     "aiAnalysis":"AI Churn Analysis",
     "rawData":"All ML Parameters (Raw Data)",
-    "activityLog":"Admin Activity Log"
+    "activityLog":"Admin Activity Log",
+    "drawerTitle": "Customer Details"
   },
   "staffDrawer": {
     "notifTitle": "{{count}} new customers assigned to you",
@@ -197,7 +199,8 @@
   "profileWorkspace": {
     "emailInfo": "Email is managed via authentication. Contact admin if changes are needed.",
     "roleLabel": "Role",
-    "fullName": "Full Name"
+    "fullName": "Full Name",
+    "role": "Role"
   },
   "hero": {
     "dashboard": "Dashboard",
@@ -251,5 +254,27 @@
     "criticalHeader": "🚨 **{{count}} Critical Unassigned Customers:**",
     "criticalFooter": "Assign and contact these customers immediately!",
     "customers": "customers"
+  },
+  "activity": {
+    "title": "Log Activity",
+    "typeLabel": "Activity Type",
+    "notesLabel": "Notes / Follow-up Results",
+    "notesPlaceholder": "e.g., Contacted customer to offer a renewal discount...",
+    "save": "Log Activity",
+    "type": {
+      "email": "Email",
+      "call": "Call",
+      "meeting": "Meeting",
+      "note": "Note"
+    }
+  },
+  "customerModal": {
+    "title": "Customer Details",
+    "plan": "Plan",
+    "featureAdoption": "Feature Adoption",
+    "assignedTo": "Assigned to",
+    "unassigned": "Unassigned",
+    "riskIndicator": "Risk Indicator",
+    "recommendation": "Recommended Actions"
   }
 }

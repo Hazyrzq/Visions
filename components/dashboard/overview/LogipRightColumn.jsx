@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase'; // Langsung pakai supabase, bye-bye mockData!
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 function initials(name) {
   if (!name) return '?';
@@ -20,7 +21,8 @@ function initials(name) {
 
 export default function LogipRightColumn({ activityFilterStaffId = null, customerHref = '/dashboard/admin/customer', showAlerts = true }) {
   const { profile } = useAuth();
-  const handle = profile?.email?.split('@')[0] ?? 'pengguna';
+  const { t, lang } = useLang();
+  const handle = profile?.email?.split('@')[0] ?? (lang === 'id' ? 'pengguna' : 'user');
 
   const [activities, setActivities] = useState([]);
   const [alerts, setAlerts] = useState([]);
@@ -129,9 +131,9 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
         </div>
         
         {loading ? (
-          <p className="text-[12px] text-slate-500 text-center py-4">Memuat aktivitas...</p>
+          <p className="text-[12px] text-slate-500 text-center py-4">{t('notifications.loadingAlerts') ?? 'Memuat pemberitahuan...'}</p>
         ) : activities.length === 0 ? (
-          <p className="text-[12px] text-slate-500 text-center py-4">Belum ada aktivitas tim.</p>
+          <p className="text-[12px] text-slate-500 text-center py-4">{t('notifications.emptyAlerts') ?? 'Tidak ada pemberitahuan baru.'}</p>
         ) : (
           <ul className="relative space-y-0 before:absolute before:left-[15px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-200">
             {activities.map((a) => {

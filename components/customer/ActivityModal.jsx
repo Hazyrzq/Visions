@@ -7,6 +7,7 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { Mail, Phone, Users, FileText, X } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { addNotifikasi } from '@/lib/churnshield';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 const activityTypes = [
   { id: 'email',   label: 'Email',   icon: Mail,      selClass: 'bg-[var(--vs-brand-50)] border-[var(--vs-brand-100)] text-[var(--vs-brand)]' },
@@ -17,6 +18,7 @@ const activityTypes = [
 
 export default function ActivityModal({ isOpen, onClose, customerTextId, onActivityAdded }) {
   const { profile } = useAuth();
+  const { t } = useLang();
   const [type, setType]       = useState('email');
   const [notes, setNotes]     = useState('');
   const [loading, setLoading] = useState(false);
@@ -70,7 +72,9 @@ export default function ActivityModal({ isOpen, onClose, customerTextId, onActiv
             className="vs-card relative w-full max-w-[440px] shadow-[var(--vs-shadow-md)] overflow-hidden">
 
             <div className="px-6 py-4 border-b border-[var(--vs-line)] flex items-center justify-between">
-              <h3 className="text-[15px] font-bold text-[var(--vs-ink)]">Catat Aktivitas</h3>
+              <h3 className="text-[15px] font-bold text-[var(--vs-ink)]">
+                {t('activity.title') ?? 'Catat Aktivitas'}
+              </h3>
               <button onClick={onClose} className="text-[var(--vs-muted-3)] hover:text-[var(--vs-ink)] transition-colors">
                 <X className="w-4 h-4" />
               </button>
@@ -78,7 +82,9 @@ export default function ActivityModal({ isOpen, onClose, customerTextId, onActiv
 
             <form onSubmit={handleSubmit} className="p-6 space-y-5">
               <div className="space-y-2.5">
-                <label className="text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider">Jenis Aktivitas</label>
+                <label className="text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider">
+                  {t('activity.typeLabel') ?? 'Jenis Aktivitas'}
+                </label>
                 <div className="grid grid-cols-4 gap-2">
                   {activityTypes.map(({ id, label, icon: Icon, selClass }) => {
                     const sel = type === id;
@@ -86,7 +92,9 @@ export default function ActivityModal({ isOpen, onClose, customerTextId, onActiv
                       <button key={id} type="button" onClick={() => setType(id)}
                         className={`flex flex-col items-center gap-1.5 py-3 rounded-xl border transition-all ${sel ? selClass : 'bg-[var(--vs-bg)] border-[var(--vs-line)] text-[var(--vs-muted-3)] hover:bg-[var(--vs-bg-2)]'}`}>
                         <Icon className="w-4 h-4" />
-                        <span className="text-[11px] font-semibold">{label}</span>
+                        <span className="text-[11px] font-semibold">
+                          {t(`activity.type.${id}`) ?? label}
+                        </span>
                       </button>
                     );
                   })}
@@ -94,12 +102,14 @@ export default function ActivityModal({ isOpen, onClose, customerTextId, onActiv
               </div>
 
               <div className="space-y-2.5">
-                <label className="text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider">Catatan / Hasil Follow-up</label>
+                <label className="text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider">
+                  {t('activity.notesLabel') ?? 'Catatan / Hasil Follow-up'}
+                </label>
                 <textarea
                   required
                   value={notes}
                   onChange={e => setNotes(e.target.value)}
-                  placeholder="Contoh: Menghubungi pelanggan untuk menawarkan diskon perpanjangan..."
+                  placeholder={t('activity.notesPlaceholder') ?? 'Contoh: Menghubungi pelanggan untuk menawarkan diskon perpanjangan...'}
                   className="vs-input w-full h-32 p-3 resize-none"
                 />
               </div>
@@ -107,10 +117,12 @@ export default function ActivityModal({ isOpen, onClose, customerTextId, onActiv
               {error && <p className="text-[12px] text-red-500">{error}</p>}
 
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={onClose} className="vs-btn vs-btn--ghost flex-1 justify-center">Batal</button>
+                <button type="button" onClick={onClose} className="vs-btn vs-btn--ghost flex-1 justify-center">
+                  {t('common.cancel') ?? 'Batal'}
+                </button>
                 <button type="submit" disabled={loading || !notes.trim()} className="vs-btn vs-btn--primary flex-1 justify-center">
                   {loading && <div className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
-                  {loading ? 'Menyimpan...' : 'Simpan Aktivitas'}
+                  {loading ? (t('common.saving') ?? 'Menyimpan...') : (t('activity.save') ?? 'Simpan Aktivitas')}
                 </button>
               </div>
             </form>

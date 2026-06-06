@@ -13,12 +13,7 @@ import {
 } from 'recharts';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
-
-const tabs = [
-  { id: '6m', label: '6 bulan' },
-  { id: 'q', label: 'Kuartal' },
-  { id: 'y', label: 'Tahun' },
-];
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 const tooltipStyle = {
   background: '#0f172a',
@@ -31,6 +26,13 @@ const tooltipStyle = {
 
 export default function LogipPerformanceChart({ data = [] }) {
   const [tab, setTab] = useState('6m');
+  const { t } = useLang();
+
+  const tabs = [
+    { id: '6m', label: t('chart.sixMonths') ?? '6 bulan' },
+    { id: 'q', label: t('chart.quarter') ?? 'Kuartal' },
+    { id: 'y', label: t('chart.year') ?? 'Tahun' },
+  ];
 
   // Potong data sesuai tab yang dipilih (3 bulan, 6 bulan, atau 12 bulan/setahun)
   const chartData = useMemo(() => {
@@ -81,7 +83,8 @@ export default function LogipPerformanceChart({ data = [] }) {
             <YAxis tick={{ fontSize: 12, fill: '#94a3b8' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${v}%`} dx={-4} />
             <Tooltip
               contentStyle={tooltipStyle}
-              formatter={(value, name) => [`${value}%`, name === 'churn_rate' ? 'Churn aktual' : 'Target']}
+              formatter={(value, name) => [`${value}%`, name === 'churn_rate' ? (t('chart.actualChurn') ?? 'Churn aktual') : (t('chart.target') ?? 'Target')                
+              ]}
             />
             <Area type="monotone" dataKey="churn_rate" stroke="none" fill="url(#churnArea)" fillOpacity={1} />
             <Line

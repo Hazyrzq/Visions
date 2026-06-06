@@ -4,11 +4,15 @@ import { Calendar } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { fadeUp } from '@/lib/motion';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 export default function LogipHero({ subtitle, eyebrow = 'Dashboard' }) {
   const { profile } = useAuth();
+  const { t, lang } = useLang();
+
   const first = profile?.full_name?.split(' ')[0] ?? '';
-  const dateLine = new Date().toLocaleDateString('id-ID', {
+
+  const dateLine = new Date().toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -20,7 +24,7 @@ export default function LogipHero({ subtitle, eyebrow = 'Dashboard' }) {
       <div className="min-w-0">
         <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.2em] text-[var(--vs-brand)]">{eyebrow}</p>
         <h1 className="text-[2.25rem] font-bold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl lg:text-[3.25rem]">
-          Halo, {first || 'Pengguna'}
+          {lang === 'id' ? 'Halo' : 'Hello'}, {first || (lang === 'id' ? 'Pengguna' : 'User')}
         </h1>
         <p className="mt-3 max-w-xl text-[15px] leading-relaxed text-slate-500 sm:text-base">{subtitle}</p>
       </div>

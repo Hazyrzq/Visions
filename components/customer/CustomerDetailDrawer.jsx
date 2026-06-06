@@ -5,10 +5,12 @@ import { createPortal } from 'react-dom';
 import { motion } from 'framer-motion';
 import { X } from 'lucide-react';
 import CustomerDetailContent from '@/components/customer/CustomerDetailContent';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 export default function CustomerDetailDrawer({ open, customerId, onClose, onExitComplete }) {
   const [mounted, setMounted] = useState(false);
   const exitNotified = useRef(false);
+  const { t } = useLang();
 
   useEffect(() => setMounted(true), []);
 
@@ -37,16 +39,11 @@ export default function CustomerDetailDrawer({ open, customerId, onClose, onExit
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[100] flex justify-end">
-      <motion.button
-        type="button"
-        aria-label="Tutup"
-        className="absolute inset-0 bg-slate-950/30"
-        initial={false}
-        animate={{ opacity: open ? 1 : 0 }}
-        transition={{ duration: 0.2 }}
-        onClick={onClose}
-        style={{ pointerEvents: open ? 'auto' : 'none' }}
+    <div className="fixed inset-0 z-[100] flex justify-end" style={{ pointerEvents: open ? 'auto' : 'none' }}>
+      <div 
+        className="absolute inset-0 bg-slate-900/20 backdrop-blur-sm transition-opacity" 
+        style={{ opacity: open ? 1 : 0 }} 
+        onClick={onClose} 
       />
       <motion.aside
         key={customerId}
@@ -61,18 +58,18 @@ export default function CustomerDetailDrawer({ open, customerId, onClose, onExit
       >
         <div className="flex shrink-0 items-center justify-between border-b border-[var(--vs-line)] px-4 py-3">
           <p id="customer-detail-drawer-title" className="text-[11px] font-bold uppercase tracking-wider text-[var(--vs-muted-2)]">
-            Detail pelanggan
+            {t('customerDetail.drawerTitle') ?? 'Detail pelanggan'}
           </p>
           <button
             type="button"
             onClick={onClose}
             className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--vs-muted)] transition-colors hover:bg-[var(--vs-bg)] hover:text-[var(--vs-ink)]"
-            aria-label="Tutup panel"
+            aria-label={t('common.closePanel') ?? 'Tutup panel'}
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-5">
+        <div className="flex-1 overflow-y-auto p-6">
           <CustomerDetailContent customerId={customerId} />
         </div>
       </motion.aside>

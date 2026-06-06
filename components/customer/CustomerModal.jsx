@@ -3,6 +3,7 @@ import Modal from '@/components/ui/Modal';
 import RiskBadge from '@/components/dashboard/RiskBadge';
 import ChurnScoreBar from '@/components/dashboard/ChurnScoreBar';
 import { Building2, Calendar, Clock, Ticket, Star, TrendingDown, Lightbulb } from 'lucide-react';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 function Row({ label, value }) {
   return (
@@ -14,10 +15,11 @@ function Row({ label, value }) {
 }
 
 export default function CustomerModal({ customer, isOpen, onClose }) {
+  const { t } = useLang();
   if (!customer) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Detail Pelanggan" size="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={t('customerModal.title') ?? 'Detail Pelanggan'} size="lg">
       <div className="p-6 space-y-6">
         {/* Header */}
         <div className="flex items-start justify-between gap-4">
@@ -35,7 +37,7 @@ export default function CustomerModal({ customer, isOpen, onClose }) {
 
         {/* Churn Score */}
         <div className="bg-gray-50 rounded-xl p-4">
-          <div className="text-sm font-semibold text-gray-700 mb-2">Churn Score</div>
+          <div className="text-sm font-semibold text-gray-700 mb-2">{t('customer.churnScore') ?? 'Churn Score'}</div>
           <ChurnScoreBar score={customer.churn_score} />
         </div>
 
@@ -61,16 +63,16 @@ export default function CustomerModal({ customer, isOpen, onClose }) {
 
         {/* Info */}
         <div>
-          <Row label="Plan" value={`${customer.plan_type} (${customer.contract_type})`} />
-          <Row label="Feature Adoption" value={`${customer.feature_adoption_pct}%`} />
-          <Row label="Assigned ke" value={customer.assigned_name ?? 'Belum diassign'} />
+          <Row label={t('customerModal.plan') ?? 'Plan'} value={`${customer.plan_type} (${customer.contract_type})`} />
+          <Row label={t('customerModal.featureAdoption') ?? 'Feature Adoption'} value={`${customer.feature_adoption_pct}%`} />
+          <Row label={t('customerModal.assignedTo') ?? 'Assigned ke'} value={customer.assigned_name ?? (t('customerModal.unassigned') ?? 'Belum diassign')} />
         </div>
 
         {/* Alasan Churn */}
         {customer.alasan_churn && (
           <div className="bg-red-50 border border-red-100 rounded-xl p-4">
             <div className="text-sm font-semibold text-red-700 mb-1 flex items-center gap-2">
-              <TrendingDown className="w-4 h-4" /> Indikator Risiko
+              <TrendingDown className="w-4 h-4" /> {t('customerModal.riskIndicator') ?? 'Indikator Risiko'}
             </div>
             <p className="text-sm text-red-600 leading-relaxed">{customer.alasan_churn}</p>
           </div>
@@ -80,7 +82,7 @@ export default function CustomerModal({ customer, isOpen, onClose }) {
         {customer.rekomendasi && (
           <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
             <div className="text-sm font-semibold text-indigo-700 mb-1 flex items-center gap-2">
-              <Lightbulb className="w-4 h-4" /> Rekomendasi Retensi
+              <Lightbulb className="w-4 h-4" /> {t('customerModal.recommendation') ?? 'Rekomendasi Tindakan'}
             </div>
             <p className="text-sm text-indigo-600 leading-relaxed">{customer.rekomendasi}</p>
           </div>

@@ -1,7 +1,5 @@
 'use client';
 
-// Belom terlalu panjang
-
 import { useLang } from '@/lib/i18n/LanguageContext';
 
 import { useState, useEffect } from 'react';
@@ -46,7 +44,7 @@ async function sendAssignEmail({ email, staffName, customers, assignType, adminN
 }
 
 // Distribusi round-robin dengan penghormatan max_load per-staff
-async function distributeToStaff(customerList, targetStaff, currentLoads, adminName = '') {
+async function distributeToStaff(customerList, targetStaff, currentLoads, adminName = '', tFn = (k) => k) {
   const loads = targetStaff.map(s => ({
     id: s.id,
     email: s.email,
@@ -80,10 +78,10 @@ async function distributeToStaff(customerList, targetStaff, currentLoads, adminN
       .in('id', s.customerIds);
 
     addNotifikasi({
-      title: t('staffDrawer.notifTitle', { count: s.customerIds.length }),
+      title: tFn('staffDrawer.notifTitle', { count: s.customerIds.length }),
       message: adminName
-        ? t('staffDrawer.notifMsgAdmin', { adminName: adminName, count: s.customerIds.length })
-        : t('staffDrawer.notifMsgSystem', { count: s.customerIds.length }),
+        ? tFn('staffDrawer.notifMsgAdmin', { adminName: adminName, count: s.customerIds.length })
+        : tFn('staffDrawer.notifMsgSystem', { count: s.customerIds.length }),
       type: 'assign',
       recipient_id: s.id,
     }).catch(() => {});
@@ -179,7 +177,7 @@ export default function StaffDrawer({
   };
 
   let filteredAssigned = assignedCustomers;
-  if (riskFilterAssigned !== 'Semua') {
+  if (riskFilterAssigned !== 'All') {
     filteredAssigned = filteredAssigned.filter(c => normalizeRisk(c.risk_level) === riskFilterAssigned);
   }
 
@@ -233,7 +231,7 @@ export default function StaffDrawer({
       const canAssign     = Math.max(0, targetMaxLoad - targetLoad);
 
       if (canAssign <= 0) {
-        toast(`${targetStaff?.full_name} sudah penuh (maks ${targetMaxLoad}).`, 'error');
+        toast(lang === 'en' ? `${targetStaff?.full_name} is full (max ${targetMaxLoad}).` : `${targetStaff?.full_name} sudah penuh (maks ${targetMaxLoad}).`, 'error');
         setSaving(false);
         return;
       }
@@ -248,8 +246,10 @@ export default function StaffDrawer({
         .in('id', toAssign.map(c => c.id));
 
       addNotifikasi({
-        title: `${toAssign.length} pelanggan baru di-assign ke Anda`,
-        message: `${adminName ? adminName + ' telah' : 'Admin'} menugaskan ${toAssign.length} pelanggan kepada Anda. Segera tindak lanjuti.`,
+        title: t('staffDrawer.notifTitle', { count: toAssign.length }),
+        message: adminName
+          ? t('staffDrawer.notifMsgAdmin', { adminName, count: toAssign.length })
+          : t('staffDrawer.notifMsgSystem', { count: toAssign.length }),
         type: 'assign',
         recipient_id: targetStaff.id,
       }).catch(() => {});
@@ -263,14 +263,18 @@ export default function StaffDrawer({
       });
 
       const msg = skippedCount > 0
-        ? `${toAssign.length} ditugaskan. ${skippedCount} dilewati (kapasitas penuh).`
-        : `${toAssign.length} pelanggan ditugaskan ke ${targetStaff?.full_name}.`;
+        ? lang === 'en'
+          ? `${toAssign.length} assigned. ${skippedCount} skipped (capacity full).`
+          : `${toAssign.length} ditugaskan. ${skippedCount} dilewati (kapasitas penuh).`
+        : lang === 'en'
+          ? `${toAssign.length} customers assigned to ${targetStaff?.full_name}.`
+          : `${toAssign.length} pelanggan ditugaskan ke ${targetStaff?.full_name}.`;
       toast(msg, 'success');
       setSelectedCustomers([]);
       if (!isBulk) setTab('assigned');
       onRefresh();
     } catch {
-      toast('Gagal menyimpan tugas', 'error');
+      toast(lang === 'en' ? 'Failed to save assignment.' : 'Gagal menyimpan tugas', 'error');
     } finally {
       setSaving(false);
     }
@@ -279,24 +283,30 @@ export default function StaffDrawer({
   // ── Auto-assign ──
   const handleAutoAssign = async () => {
     if (!unassignedCustomers.length) {
-      toast('Tidak ada pelanggan yang perlu di-assign.', 'success');
+      toast(lang === 'en' ? 'No customers to assign.' : 'Tidak ada pelanggan yang perlu di-assign.', 'success');
       return;
     }
     setAutoAssigning(true);
     try {
       const { assigned, skipped } = await distributeToStaff(
-        unassignedCustomers, targets, currentLoads, adminName
+        unassignedCustomers, targets, currentLoads, adminName, t
       );
       const msg = skipped > 0
-        ? `${assigned} pelanggan di-assign. ${skipped} dilewati karena semua staf sudah penuh.`
+        ? lang === 'en'
+          ? `${assigned} customers assigned. ${skipped} skipped (all staff at capacity).`
+          : `${assigned} pelanggan di-assign. ${skipped} dilewati karena semua staf sudah penuh.`
         : isBulk
-          ? `${assigned} pelanggan otomatis dibagi ke ${targets.length} staf.`
-          : `${assigned} pelanggan di-assign ke ${staff.full_name}.`;
+          ? lang === 'en'
+            ? `${assigned} customers distributed to ${targets.length} staff.`
+            : `${assigned} pelanggan otomatis dibagi ke ${targets.length} staf.`
+          : lang === 'en'
+            ? `${assigned} customers assigned to ${staff.full_name}.`
+            : `${assigned} pelanggan di-assign ke ${staff.full_name}.`;
       toast(msg, 'success');
       setTab('assigned');
       onRefresh();
     } catch {
-      toast('Gagal auto-assign', 'error');
+      toast(lang === 'en' ? 'Auto-assign failed.' : 'Gagal auto-assign', 'error');
     } finally {
       setAutoAssigning(false);
     }
@@ -306,9 +316,9 @@ export default function StaffDrawer({
   const handleUnassignOne = async (customerId) => {
     try {
       await supabase.from('customers').update({ assigned_to: null }).eq('id', customerId);
-      toast('Pelanggan berhasil di-unassign.', 'success');
+      toast(lang === 'en' ? 'Customer unassigned.' : 'Pelanggan berhasil di-unassign.', 'success');
       onRefresh();
-    } catch { toast('Gagal unassign', 'error'); }
+    } catch { toast(lang === 'en' ? 'Failed to unassign.' : 'Gagal unassign', 'error'); }
   };
 
   const handleUnassignBatch = async () => {
@@ -316,11 +326,11 @@ export default function StaffDrawer({
     setUnassigning(true);
     try {
       await supabase.from('customers').update({ assigned_to: null }).in('id', selectedUnassign);
-      toast(`${selectedUnassign.length} pelanggan berhasil di-unassign.`, 'success');
+      toast(lang === 'en' ? `${selectedUnassign.length} customers unassigned.` : `${selectedUnassign.length} pelanggan berhasil di-unassign.`, 'success');
       setSelectedUnassign([]);
       setUnassignMode(false);
       onRefresh();
-    } catch { toast('Gagal unassign', 'error'); }
+    } catch { toast(lang === 'en' ? 'Failed to unassign.' : 'Gagal unassign', 'error'); }
     finally { setUnassigning(false); }
   };
 
@@ -329,11 +339,11 @@ export default function StaffDrawer({
     setUnassigning(true);
     try {
       await supabase.from('customers').update({ assigned_to: null }).in('id', assignedCustomers.map(c => c.id));
-      toast(`Semua ${assignedCustomers.length} pelanggan berhasil di-unassign.`, 'success');
+      toast(lang === 'en' ? `All ${assignedCustomers.length} customers unassigned.` : `Semua ${assignedCustomers.length} pelanggan berhasil di-unassign.`, 'success');
       setSelectedUnassign([]);
       setUnassignMode(false);
       onRefresh();
-    } catch { toast('Gagal unassign semua', 'error'); }
+    } catch { toast(lang === 'en' ? 'Failed to unassign all.' : 'Gagal unassign semua', 'error'); }
     finally { setUnassigning(false); }
   };
 
@@ -345,12 +355,14 @@ export default function StaffDrawer({
   const activeTargetRemaining = Math.max(0, activeTargetMaxLoad - activeTargetLoad);
 
   const assignLabel = isBulk
-    ? (activeTargetStaff ? `Assign ke ${activeTargetStaff.full_name.split(' ')[0]}` : 'Pilih staf dulu ↑')
-    : `Assign ke ${staff.full_name}`;
+    ? (activeTargetStaff
+        ? lang === 'en' ? `Assign to ${activeTargetStaff.full_name.split(' ')[0]}` : `Assign ke ${activeTargetStaff.full_name.split(' ')[0]}`
+        : lang === 'en' ? 'Select staff first ↑' : 'Pilih staf dulu ↑')
+    : lang === 'en' ? `Assign to ${staff.full_name}` : `Assign ke ${staff.full_name}`;
 
   const autoAssignLabel = isBulk
-    ? `Distribusi Otomatis (${unassignedCustomers.length})`
-    : `Auto-assign Semua (${unassignedCustomers.length})`;
+    ? lang === 'en' ? `Auto Distribute (${unassignedCustomers.length})` : `Distribusi Otomatis (${unassignedCustomers.length})`
+    : lang === 'en' ? `Auto-assign All (${unassignedCustomers.length})` : `Auto-assign Semua (${unassignedCustomers.length})`;
 
   return createPortal(
     <div className="fixed inset-0 z-[100] flex justify-end" style={{ pointerEvents: open ? 'auto' : 'none' }}>
@@ -367,7 +379,7 @@ export default function StaffDrawer({
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            {isBulk ? `Assign ke ${targets.length} Staf` : 'Detail Staf'}
+            {isBulk ? (lang === 'en' ? `Assign to ${targets.length} Staff` : `Assign ke ${targets.length} Staf`) : (lang === 'en' ? 'Staff Detail' : 'Detail Staf')}
           </p>
           <button type="button" onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
@@ -378,8 +390,8 @@ export default function StaffDrawer({
         {/* Profile / Bulk header */}
         {isBulk ? (
           <div className="shrink-0 border-b border-slate-100 px-5 py-4">
-            <p className="mb-1 text-[13px] font-bold text-slate-900">Assign ke Staf</p>
-            <p className="mb-3 text-[11px] text-slate-500">Pilih staf tujuan, lalu centang pelanggan untuk di-assign.</p>
+            <p className="mb-1 text-[13px] font-bold text-slate-900">{lang === 'en' ? 'Assign to Staff' : 'Assign ke Staf'}</p>
+            <p className="mb-3 text-[11px] text-slate-500">{lang === 'en' ? 'Select target staff, then check customers to assign.' : 'Pilih staf tujuan, lalu centang pelanggan untuk di-assign.'}</p>
             <div className="flex flex-wrap gap-2">
               {targets.map(s => {
                 const isActive = activeTargetId === s.id;
@@ -431,7 +443,7 @@ export default function StaffDrawer({
                 <span>{t('staffView.workload')}</span>
                 <span className={wl >= staffMaxLoad ? 'font-semibold text-red-500' : ''}>
                   {wl} / {staffMaxLoad} {t('staffView.capacity')}
-                  {remaining > 0 && <span className="ml-1 text-emerald-600">(sisa {remaining})</span>}
+                  {remaining > 0 && <span className="ml-1 text-emerald-600">({lang === 'en' ? 'remaining' : 'sisa'} {remaining})</span>}
                 </span>
               </div>
               <div className="h-2 overflow-hidden rounded-full bg-slate-100">
@@ -471,10 +483,10 @@ export default function StaffDrawer({
               {assignedCustomers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <Users className="mb-3 h-10 w-10 text-slate-200" />
-                  <p className="text-[13px] font-medium text-slate-400">Belum ada pelanggan ditugaskan</p>
+                  <p className="text-[13px] font-medium text-slate-400">{lang === 'en' ? 'No customers assigned yet' : 'Belum ada pelanggan ditugaskan'}</p>
                   <button type="button" onClick={() => setTab('assign')}
                     className="mt-3 text-[12px] font-semibold text-blue-600 hover:underline">
-                    Assign sekarang <ChevronRight className="inline h-3 w-3" />
+{lang === 'en' ? 'Assign now' : 'Assign sekarang'} <ChevronRight className="inline h-3 w-3" />
                   </button>
                 </div>
               ) : (
@@ -486,21 +498,21 @@ export default function StaffDrawer({
                         <button type="button" onClick={toggleAllUnassign}
                           className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-red-600">
                           {allUnassignSelected ? <CheckSquare className="h-4 w-4 text-red-500" /> : <Square className="h-4 w-4" />}
-                          Pilih Semua ({assignedCustomers.length})
+{lang === 'en' ? 'Select All' : 'Pilih Semua'} ({assignedCustomers.length})
                         </button>
                         <div className="flex items-center gap-2">
                           {selectedUnassign.length > 0 && (
-                            <span className="text-[11px] font-semibold text-red-600">{selectedUnassign.length} dipilih</span>
+<span className="text-[11px] font-semibold text-red-600">{selectedUnassign.length} {lang === 'en' ? 'selected' : 'dipilih'}</span>
                           )}
                           <button type="button" onClick={() => { setUnassignMode(false); setSelectedUnassign([]); }}
                             className="rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-500 hover:bg-slate-50">
-                            Batal
+{lang === 'en' ? 'Cancel' : 'Batal'}
                           </button>
                         </div>
                       </>
                     ) : (
                       <>
-                        <span className="text-[12px] text-slate-400">{wl} pelanggan ditugaskan</span>
+                        <span className="text-[12px] text-slate-400">{wl} {lang === 'en' ? 'customers assigned' : 'pelanggan ditugaskan'}</span>
                         <button type="button" onClick={() => setUnassignMode(true)}
                           className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-600 hover:border-red-200 hover:bg-red-50 hover:text-red-600 transition-colors">
                           <UserMinus className="h-3.5 w-3.5" /> Unassign
@@ -514,8 +526,8 @@ export default function StaffDrawer({
                     <div className="shrink-0 border-b border-slate-100 px-5 py-3 space-y-2">
                       {/* Risk Filter */}
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-[11px] font-semibold text-slate-400 uppercase">Risiko:</span>
-                        {['Semua', 'High', 'Medium', 'Low'].map(risk => (
+<span className="text-[11px] font-semibold text-slate-400 uppercase">{lang === 'en' ? 'Risk:' : 'Risiko:'}</span>
+{['All', 'High', 'Medium', 'Low'].map(risk => (
                           <button key={risk}
                             onClick={() => setRiskFilterAssigned(risk)}
                             className={`rounded-full px-3 py-1 text-[11px] font-semibold transition-all border ${
@@ -523,15 +535,15 @@ export default function StaffDrawer({
                                 ? 'bg-slate-900 text-white border-slate-900'
                                 : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
                             }`}>
-                            {risk === 'High' ? '🔴' : risk === 'Medium' ? '🟡' : risk === 'Low' ? '🟢' : ''}
-                            {risk}
+{risk === 'High' ? '🔴' : risk === 'Medium' ? '🟡' : risk === 'Low' ? '🟢' : ''}
+                            {risk === 'All' ? (lang === 'en' ? 'All' : 'Semua') : risk}
                           </button>
                         ))}
                       </div>
 
                       {/* Sort Dropdown */}
                       <div className="flex items-center gap-2">
-                        <span className="text-[11px] font-semibold text-slate-400 uppercase">Sort:</span>
+<span className="text-[11px] font-semibold text-slate-400 uppercase">{lang === 'en' ? 'Sort:' : 'Urut:'}</span>
                         <select 
                           value={sortByAssigned}
                           onChange={(e) => setSortByAssigned(e.target.value)}
@@ -543,7 +555,7 @@ export default function StaffDrawer({
 
                       {/* Result count */}
                       <div className="text-[11px] text-slate-400">
-                        {filteredAssigned.length} dari {assignedCustomers.length} ditampilkan
+{lang === 'en' ? `${filteredAssigned.length} of ${assignedCustomers.length} shown` : `${filteredAssigned.length} dari ${assignedCustomers.length} ditampilkan`}
                       </div>
                     </div>
                   )}
@@ -588,13 +600,13 @@ export default function StaffDrawer({
                           <button type="button" onClick={handleUnassignBatch} disabled={unassigning}
                             className="flex w-full items-center justify-center gap-2 rounded-xl bg-red-600 py-2.5 text-[13px] font-semibold text-white transition hover:bg-red-700 disabled:opacity-40">
                             {unassigning ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> : <UserMinus className="h-4 w-4" />}
-                            Unassign {selectedUnassign.length} Pelanggan Terpilih
+{lang === 'en' ? `Unassign ${selectedUnassign.length} Selected` : `Unassign ${selectedUnassign.length} Pelanggan Terpilih`}
                           </button>
                         )}
                         <button type="button" onClick={handleUnassignAll} disabled={unassigning}
                           className="flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-red-50 py-2.5 text-[13px] font-semibold text-red-700 transition hover:bg-red-100 disabled:opacity-40">
                           {unassigning ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-red-400/30 border-t-red-500" /> : <Trash2 className="h-4 w-4" />}
-                          Unassign Semua ({filteredAssigned.length})
+{lang === 'en' ? `Unassign All (${filteredAssigned.length})` : `Unassign Semua (${filteredAssigned.length})`}
                         </button>
                       </motion.div>
                     )}
@@ -610,7 +622,7 @@ export default function StaffDrawer({
               {unassignedCustomers.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-16 text-center">
                   <CheckSquare className="mb-3 h-10 w-10 text-emerald-300" />
-                  <p className="text-[13px] font-medium text-slate-400">Semua pelanggan sudah di-assign</p>
+<p className="text-[13px] font-medium text-slate-400">{lang === 'en' ? 'All customers are assigned' : 'Semua pelanggan sudah di-assign'}</p>
                 </div>
               ) : (
                 <>
@@ -618,14 +630,14 @@ export default function StaffDrawer({
                   {!isBulk && overloaded && (
                     <div className="mx-5 mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5">
                       <p className="text-[12px] font-semibold text-red-700">
-                        ⚠️ {staff.full_name} sudah mencapai kapasitas maksimum ({staffMaxLoad}). Lakukan unassign terlebih dahulu.
+{lang === 'en' ? `⚠️ ${staff.full_name} has reached max capacity (${staffMaxLoad}). Please unassign first.` : `⚠️ ${staff.full_name} sudah mencapai kapasitas maksimum (${staffMaxLoad}). Lakukan unassign terlebih dahulu.`}
                       </p>
                     </div>
                   )}
                   {isBulk && activeTargetId && activeTargetRemaining === 0 && (
                     <div className="mx-5 mt-3 rounded-xl border border-red-200 bg-red-50 px-4 py-2.5">
                       <p className="text-[12px] font-semibold text-red-700">
-                        ⚠️ Staf ini sudah penuh ({activeTargetMaxLoad}/{activeTargetMaxLoad}). Pilih staf lain.
+{lang === 'en' ? `⚠️ This staff is full (${activeTargetMaxLoad}/${activeTargetMaxLoad}). Select another staff.` : `⚠️ Staf ini sudah penuh (${activeTargetMaxLoad}/${activeTargetMaxLoad}). Pilih staf lain.`}
                       </p>
                     </div>
                   )}
@@ -634,7 +646,7 @@ export default function StaffDrawer({
                   <div className="space-y-2.5 border-b border-slate-100 px-5 py-3">
                     <div className="relative">
                       <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-                      <input type="text" placeholder="{t('staffView.searchCustomer')}" value={search}
+                      <input type="text" placeholder={t('staffView.searchCustomer')} value={search}
                         onChange={e => setSearch(e.target.value)}
                         className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2 pl-9 pr-3 text-[13px] outline-none focus:border-blue-400 focus:bg-white" />
                     </div>
@@ -642,13 +654,13 @@ export default function StaffDrawer({
                       <button type="button" onClick={toggleAllFiltered}
                         className="flex items-center gap-2 text-[12px] font-semibold text-slate-600 hover:text-blue-600">
                         {allFilteredSelected ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4" />}
-                        Pilih Semua ({filteredUnassigned.length})
+{lang === 'en' ? 'Select All' : 'Pilih Semua'} ({filteredUnassigned.length})
                       </button>
                       {selectedCustomers.length > 0 && (
                         <span className="text-[11px] font-semibold text-blue-600">
-                          {selectedCustomers.length} dipilih
+                          {selectedCustomers.length} {lang === 'en' ? 'selected' : 'dipilih'}
                           {!isBulk && remaining > 0 && (
-                            <span className="ml-1 text-slate-400">(sisa kapasitas: {remaining})</span>
+                            <span className="ml-1 text-slate-400">({lang === 'en' ? `remaining capacity: ${remaining}` : `sisa kapasitas: ${remaining}`})</span>
                           )}
                         </span>
                       )}
@@ -681,10 +693,10 @@ export default function StaffDrawer({
                   {/* Action buttons */}
                   <div className="shrink-0 space-y-2 border-t border-slate-100 bg-white px-5 py-4">
                     <p className="text-center text-[11px] text-slate-400">
-                      Auto-assign: <span className="text-red-500 font-semibold">🔴 Tinggi (≥80)</span> →{' '}
-                      <span className="text-amber-500 font-semibold">🟡 Sedang (50–79)</span> →{' '}
-                      <span className="text-emerald-500 font-semibold">🟢 Rendah (&lt;50)</span>
-                      {!isBulk && <span className="ml-1 text-slate-400">· maks {staffMaxLoad}/staf</span>}
+                      Auto-assign: <span className="text-red-500 font-semibold">🔴 {lang === 'en' ? 'High' : 'Tinggi'} (≥70)</span> →{' '}
+                      <span className="text-amber-500 font-semibold">🟡 {lang === 'en' ? 'Medium' : 'Sedang'} (30–69)</span> →{' '}
+                      <span className="text-emerald-500 font-semibold">🟢 {lang === 'en' ? 'Low' : 'Rendah'} (&lt;30)</span>
+                      {!isBulk && <span className="ml-1 text-slate-400">· {lang === 'en' ? `max ${staffMaxLoad}/staff` : `maks ${staffMaxLoad}/staf`}</span>}
                     </p>
 
                     <button type="button" onClick={handleManualAssign}
@@ -693,7 +705,7 @@ export default function StaffDrawer({
                       {saving ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
                         : (isBulk ? <Shuffle className="h-4 w-4" /> : <UserPlus className="h-4 w-4" />)}
                       {selectedCustomers.length > 0
-                        ? `${isBulk ? 'Distribusikan' : 'Assign'} ${selectedCustomers.length} Pelanggan`
+                        ? `${isBulk ? (lang === 'en' ? 'Distribute' : 'Distribusikan') : 'Assign'} ${selectedCustomers.length} ${lang === 'en' ? 'Customers' : 'Pelanggan'}`
                         : assignLabel}
                     </button>
 

@@ -1,7 +1,5 @@
 'use client';
 
-// belum sempuran
-
 import { Suspense, useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
@@ -25,7 +23,8 @@ function initials(name) {
     .toUpperCase();
 }
 
-function roleBadgeLabel(role) {
+// ✅ PERBAIKAN 1: Tambahkan parameter 't' di sini
+function roleBadgeLabel(role, t) {
   if (role === 'admin') return t('role.admin');
   if (role === 'staff') return t('role.staff');
   return role ?? '—';
@@ -113,7 +112,8 @@ function ProfileWorkspaceContent({ dashboardHome }) {
             <p className="mt-1 truncate text-[14px] font-medium text-[var(--vs-muted)]">{user?.email}</p>
             <span className="mt-4 inline-flex items-center rounded-full border border-[var(--vs-brand-100)] bg-white/80 px-3 py-1 text-[12px] font-semibold text-[var(--vs-brand)] shadow-sm">
               <Shield className="mr-1.5 h-3.5 w-3.5 opacity-80" />
-              {roleBadgeLabel(profile?.role)}
+              {/* ✅ Mengirim 't' ke pemanggil fungsi */}
+              {roleBadgeLabel(profile?.role, t)}
             </span>
           </div>
 
@@ -191,8 +191,10 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                 <Shield className="h-5 w-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">{t('profileWorkspace.emailInfo')}</p>
-                <p className="mt-1.5 text-[14px] font-semibold text-[var(--vs-ink)]">{roleBadgeLabel(profile?.role)}</p>
+                {/* ✅ PERBAIKAN 2: Mengganti translasi 'emailInfo' menjadi kunci yang benar (misal: 'role' atau 'peran') */}
+                <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">{t('profileWorkspace.role') ?? 'Role'}</p>
+                {/* ✅ Mengirim 't' ke pemanggil fungsi */}
+                <p className="mt-1.5 text-[14px] font-semibold text-[var(--vs-ink)]">{roleBadgeLabel(profile?.role, t)}</p>
               </div>
             </div>
           </div>

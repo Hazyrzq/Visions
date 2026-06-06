@@ -14,7 +14,8 @@ function initials(name) {
   return name.split(' ').filter(Boolean).slice(0, 2).map((n) => n[0]).join('').toUpperCase();
 }
 
-function roleLabel(role) {
+// ✅ PERBAIKAN: Menambahkan parameter 't' agar bisa membaca context bahasa
+function roleLabel(role, t) {
   if (role === 'admin') return t('role.admin');
   if (role === 'staff') return t('role.staff');
   return role ?? '—';
@@ -40,7 +41,7 @@ export default function ProfileHoverCard({
   minimal = false,
   children,
 }) {
-  const { t } = useLang()
+  const { t } = useLang();
   const pathname = usePathname();
   const { user, profile, logout } = useAuth();
   const [open, setOpen] = useState(false);
@@ -87,14 +88,13 @@ export default function ProfileHoverCard({
     if (window.matchMedia('(hover: none)').matches) { e.preventDefault(); setOpen((v) => !v); }
   }, [interaction]);
 
-  // Hitung posisi popup berdasarkan placement
   const popupPositionClass = (() => {
     switch (placement) {
       case 'top':        return 'bottom-full left-0 mb-2';
-      case 'bottom':     return 'top-full right-0 mt-2';   // Topbar: muncul ke bawah, rata kanan
+      case 'bottom':     return 'top-full right-0 mt-2';
       case 'right':      return 'left-full top-0 ml-2';
       case 'left':       return 'right-full top-0 mr-2';
-      case 'sidebar-up': return 'bottom-full left-0 mb-2'; // Sidebar: muncul ke atas
+      case 'sidebar-up': return 'bottom-full left-0 mb-2';
       default:           return 'top-full right-0 mt-2';
     }
   })();
@@ -148,7 +148,8 @@ export default function ProfileHoverCard({
                 <div className="min-w-0 flex-1 pt-0.5">
                   <p className="truncate text-[14px] font-bold text-slate-900">{profile?.full_name ?? 'Pengguna'}</p>
                   <p className="mt-0.5 truncate text-[12px] text-slate-500">{user?.email}</p>
-                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--vs-brand)]">{roleLabel(profile?.role)}</p>
+                  {/* ✅ PERBAIKAN: Mengirimkan fungsi 't' saat memanggil roleLabel */}
+                  <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--vs-brand)]">{roleLabel(profile?.role, t)}</p>
                 </div>
               </div>
             </div>
