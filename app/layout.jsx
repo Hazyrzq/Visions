@@ -13,6 +13,15 @@ const figtree = Figtree({
 export const metadata = {
   title: 'Visions - ChurnShield',
   description: 'Platform prediksi churn pelanggan berbasis Machine Learning',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Visions',
+  },
+};
+
+export const viewport = {
+  themeColor: '#2563EB',
 };
 
 export default function RootLayout({ children }) {
@@ -25,6 +34,26 @@ export default function RootLayout({ children }) {
             {children}
           </ConfirmProvider>
         </LanguageProvider>
+        
+        {/* Service Worker Registration for PWA */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if ('serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').then(
+                    function(reg) {
+                      console.log('[PWA] Service Worker registered with scope: ', reg.scope);
+                    },
+                    function(err) {
+                      console.log('[PWA] Service Worker registration failed: ', err);
+                    }
+                  );
+                });
+              }
+            `
+          }}
+        />
       </body>
     </html>
   );
