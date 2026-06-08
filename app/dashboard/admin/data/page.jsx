@@ -166,7 +166,8 @@ export default function AdminDataPage() {
       formData.append('file_tickets', files.tickets);
       formData.append('file_nps', files.nps);
 
-      const response = await fetch('http://basic-8.alstore.space:23998/predict-batch', {
+      const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://basic-8.alstore.space:23998';
+      const response = await fetch(`${apiBase}/predict-batch`, {
         method: 'POST', body: formData
       });
 
@@ -553,7 +554,7 @@ export default function AdminDataPage() {
                 <RotateCcw className="h-6 w-6 text-blue-400" />
               </div>
               <p className="text-[13px] font-semibold text-slate-700">Belum ada hasil retensi</p>
-              <p className="mt-1 text-[12px] text-slate-400 max-w-xs">Klik "Jalankan Retensi" untuk memulai proses AI pada pelanggan berisiko tinggi.</p>
+              <p className="mt-1 text-[12px] text-slate-400 max-w-xs">Klik &quot;Jalankan Retensi&quot; untuk memulai proses AI pada pelanggan berisiko tinggi.</p>
             </div>
           )}
 

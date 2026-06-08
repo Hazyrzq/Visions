@@ -11,6 +11,7 @@ import { useToast, ToastContainer } from '@/components/ui/Toast';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
 import { addNotifikasi } from '@/lib/churnshield';
+import { useLang } from '@/lib/i18n/LanguageContext';
 import DashboardShell from '@/components/dashboard/DashboardShell';
 import MetricCard from '@/components/dashboard/MetricCard';
 import StaffDrawer from '@/components/staff/StaffDrawer';
@@ -37,7 +38,7 @@ async function sendAssignEmail({ email, staffName, customers, assignType, adminN
 }
 
 // Batch auto-assign — limit per-staff dari staff.max_load
-async function batchAssign(unassignedList, targetStaff, currentLoads, adminName = '') {
+async function batchAssign(unassignedList, targetStaff, currentLoads, adminName = '', lang = 'id') {
   const loads = targetStaff.map(s => ({
     id: s.id,
     email: s.email,
@@ -65,8 +66,12 @@ async function batchAssign(unassignedList, targetStaff, currentLoads, adminName 
     await supabase.from('customers').update({ assigned_to: staff.id }).in('id', staff.customerIds);
 
     addNotifikasi({
-      title: `${staff.customerIds.length} pelanggan baru di-assign ke Anda`,
-      message: `${adminName ? adminName + ' telah' : 'Admin'} menugaskan ${staff.customerIds.length} pelanggan kepada Anda via auto-assign.`,
+      title: lang === 'en' 
+        ? `${staff.customerIds.length} new customers assigned to you`
+        : `${staff.customerIds.length} pelanggan baru di-assign ke Anda`,
+      message: lang === 'en'
+        ? `${adminName ? adminName + ' has' : 'Admin'} assigned ${staff.customerIds.length} customers to you via auto-assign.`
+        : `${adminName ? adminName + ' telah' : 'Admin'} menugaskan ${staff.customerIds.length} pelanggan kepada Anda via auto-assign.`,
       type: 'assign',
       recipient_id: staff.id,
     }).catch(() => {});
@@ -84,6 +89,7 @@ async function batchAssign(unassignedList, targetStaff, currentLoads, adminName 
 }
 
 export default function AdminStaffPage() {
+  const { t, lang } = useLang();
   const { toasts, toast, remove } = useToast();
   const { profile } = useAuth();
   const adminName = profile?.full_name ?? '';
@@ -108,7 +114,7 @@ export default function AdminStaffPage() {
       const { data: cd } = await supabase.from('customers').select('*');
       if (sd) setStaffList(sd);
       if (cd) setCustomers(cd);
-    } catch { toast('Gagal mengambil data', 'error'); }
+    } catch { toast(lang === 'en' ? 'Failed to fetch data' : 'Gagal mengambil data', 'error'); }
     finally { setLoading(false); }
   };
 
@@ -138,7 +144,10 @@ export default function AdminStaffPage() {
     targets.reduce((sum, s) => sum + Math.max(0, (s.max_load ?? 10) - (currentLoads[s.id] ?? 0)), 0);
 
   const runAssign = async () => {
-    if (!unassignedCount) { toast('Tidak ada pelanggan yang perlu di-assign.', 'success'); return; }
+    if (!unassignedCount) {
+      toast(lang === 'en' ? 'No customers to assign.' : 'Tidak ada pelanggan yang perlu di-assign.', 'success');
+      return;
+    }
     setAssigning(true);
     try {
       const targets = confirmMode === 'bulk'
@@ -164,22 +173,30 @@ export default function AdminStaffPage() {
         toAssign = toAssign.filter(c => normRisk(c.risk_level) === 'Low' || (!c.risk_level && c.churn_score < 30));
 
       if (!toAssign.length) {
-        toast(`Tidak ada pelanggan dengan risiko ${assignLevel} yang belum di-assign.`, 'success');
+        const levelLabelTranslated = assignLevel === 'High' ? (lang === 'en' ? 'high' : 'tinggi')
+                                   : assignLevel === 'Medium' ? (lang === 'en' ? 'medium' : 'sedang')
+                                   : (lang === 'en' ? 'low' : 'rendah');
+        toast(
+          lang === 'en'
+            ? `No unassigned customers with ${levelLabelTranslated} risk.`
+            : `Tidak ada pelanggan dengan risiko ${assignLevel} yang belum di-assign.`, 
+          'success'
+        );
         setAssigning(false);
         setConfirmMode(null);
         return;
       }
 
-      const { assigned, skipped } = await batchAssign(toAssign, targets, currentLoads, adminName);
+      const { assigned, skipped } = await batchAssign(toAssign, targets, currentLoads, adminName, lang);
       await fetchData();
 
-      const levelLabel = assignLevel === 'all' ? '' : ` risiko ${assignLevel}`;
+      const levelLabel = assignLevel === 'all' ? '' : (lang === 'en' ? ` with ${assignLevel} risk` : ` risiko ${assignLevel}`);
       const msg = skipped > 0
-        ? `${assigned} pelanggan${levelLabel} dibagikan. ${skipped} dilewati (semua staf sudah penuh).`
-        : `${assigned} pelanggan${levelLabel} berhasil dibagikan ke ${targets.length} staf.`;
+        ? (lang === 'en' ? `${assigned} customers${levelLabel} assigned. ${skipped} skipped (all staff are full).` : `${assigned} pelanggan${levelLabel} dibagikan. ${skipped} dilewati (semua staf sudah penuh).`)
+        : (lang === 'en' ? `${assigned} customers${levelLabel} successfully assigned to ${targets.length} staff.` : `${assigned} pelanggan${levelLabel} berhasil dibagikan ke ${targets.length} staf.`);
       toast(msg, 'success');
       if (confirmMode === 'bulk') setSelectedStaffIds([]);
-    } catch { toast('Terjadi kesalahan', 'error'); }
+    } catch { toast(lang === 'en' ? 'An error occurred' : 'Terjadi kesalahan', 'error'); }
     finally { setAssigning(false); setConfirmMode(null); setAssignLevel('all'); }
   };
 
@@ -192,15 +209,17 @@ export default function AdminStaffPage() {
 
   return (
     <DashboardShell
-      title="Distribusi tugas staf"
-      description="Pantau beban kerja staf dan bagikan pelanggan berisiko."
+      title={t('staffView.title') ?? 'Distribusi tugas staf'}
+      description={t('staffView.subtitle') ?? 'Pantau beban kerja staf dan bagikan pelanggan berisiko.'}
       icon={Briefcase}
       actions={(
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {unassignedCount > 0 && (
             <div className="flex items-center gap-2 rounded-lg border border-amber-100 bg-amber-50 px-3 py-1.5">
               <AlertCircle className="h-4 w-4 text-amber-600" />
-              <span className="text-[12px] font-semibold text-amber-700">{unassignedCount} belum di-assign</span>
+              <span className="text-[12px] font-semibold text-amber-700">
+                {unassignedCount} {lang === 'en' ? 'unassigned' : 'belum di-assign'}
+              </span>
             </div>
           )}
           <Button
@@ -208,7 +227,7 @@ export default function AdminStaffPage() {
             disabled={assigning || loading || unassignedCount === 0 || confirmMode !== null}
             className="gap-2 border-none bg-[var(--vs-brand)] text-white shadow-sm hover:bg-blue-700"
           >
-            <Sparkles className="h-4 w-4" /> Auto-assign
+            <Sparkles className="h-4 w-4" /> {t('staffView.autoAssign') ?? 'Auto-Assign'}
           </Button>
         </div>
       )}
@@ -217,7 +236,7 @@ export default function AdminStaffPage() {
       <div className="mb-6 grid grid-cols-2 md:grid-cols-4 gap-4">
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.05 }}>
           <MetricCard
-            title="Staff Aktif"
+            title={t('overview.activeStaff') ?? 'Staff Aktif'}
             value={metrics.totalActiveStaff}
             icon={Users}
             color="blue"
@@ -226,7 +245,7 @@ export default function AdminStaffPage() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.12 }}>
           <MetricCard
-            title="Pelanggan Assigned"
+            title={t('overview.assignedCustomers') ?? 'Pelanggan Assigned'}
             value={metrics.totalAssignedCustomers}
             icon={Briefcase}
             color="indigo"
@@ -235,9 +254,9 @@ export default function AdminStaffPage() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.19 }}>
           <MetricCard
-            title="Kapasitas Penuh"
+            title={t('overview.capacityFull') ?? 'Kapasitas Penuh'}
             value={metrics.staffAtCapacity}
-            subtitle={`dari ${metrics.totalActiveStaff} staff`}
+            subtitle={t('overview.fromStaffCount', { count: metrics.totalActiveStaff }) ?? `dari ${metrics.totalActiveStaff} staff`}
             icon={AlertCircle}
             color={metrics.staffAtCapacity > 0 ? 'red' : 'emerald'}
           />
@@ -245,7 +264,7 @@ export default function AdminStaffPage() {
 
         <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.26 }}>
           <MetricCard
-            title="Avg. Beban Kerja"
+            title={t('overview.avgWorkload') ?? 'Avg. Beban Kerja'}
             value={`${metrics.averageWorkload} / 10`}
             subtitle={metrics.highestWorkloadStaff ? `Max: ${metrics.highestWorkloadStaff.name}` : '—'}
             icon={TrendingUp}
@@ -265,14 +284,16 @@ export default function AdminStaffPage() {
               <div>
                 <p className="text-[13px] font-bold text-blue-900">
                   {confirmMode === 'bulk'
-                    ? `Bagikan pelanggan ke ${selectedStaffIds.length} staf terpilih?`
-                    : `Bagikan pelanggan ke semua staf (${staffList.length})?`}
+                    ? (t('staffView.confirmBulk') ?? `Bagikan pelanggan ke ${selectedStaffIds.length} staf terpilih?`)
+                    : (t('staffView.confirmAll') ?? `Bagikan pelanggan ke semua staf (${staffList.length})?`)}
                 </p>
                 <p className="mt-0.5 text-[12px] text-blue-700">
-                  Diurutkan Tinggi → Sedang → Rendah. Limit sesuai kapasitas masing-masing staf.
+                  {t('staffView.sortedInfo') ?? 'Diurutkan Tinggi → Sedang → Rendah. Limit sesuai kapasitas masing-masing staf.'}
                   {confirmRemaining < unassignedCount && assignLevel === 'all' && (
                     <span className="ml-1 font-semibold text-amber-700">
-                      ⚠️ Total kapasitas ({confirmRemaining}) kurang dari pelanggan unassigned ({unassignedCount}).
+                      {lang === 'en' 
+                        ? `⚠️ Total capacity (${confirmRemaining}) is less than unassigned customers (${unassignedCount}).`
+                        : `⚠️ Total kapasitas (${confirmRemaining}) kurang dari pelanggan unassigned (${unassignedCount}).`}
                     </span>
                   )}
                 </p>
@@ -280,22 +301,22 @@ export default function AdminStaffPage() {
               <div className="flex shrink-0 items-center gap-2">
                 <button type="button" onClick={() => setConfirmMode(null)} disabled={assigning}
                   className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
-                  Batal
+                  {t('staffView.cancel') ?? 'Batal'}
                 </button>
                 <button type="button" onClick={runAssign} disabled={assigning}
                   className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-[13px] font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
                   {assigning
-                    ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> Memproses…</>
-                    : <><Sparkles className="h-4 w-4" /> Jalankan</>}
+                    ? <><div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" /> {t('staffView.processing') ?? 'Memproses…'}</>
+                    : <><Sparkles className="h-4 w-4" /> {t('staffView.run') ?? 'Jalankan'}</>}
                 </button>
               </div>
             </div>
 
             {/* Filter level risiko */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-semibold text-blue-700">Assign level:</span>
+              <span className="text-[11px] font-semibold text-blue-700">{t('staffView.assignLevel') ?? 'Assign level:'}</span>
               {[
-                { value: 'all',    label: 'Semua',            color: 'bg-blue-600 text-white',    inactive: 'border border-blue-200 bg-white text-blue-700 hover:bg-blue-100' },
+                { value: 'all',    label: t('staffView.allLevels') ?? 'Semua',            color: 'bg-blue-600 text-white',    inactive: 'border border-blue-200 bg-white text-blue-700 hover:bg-blue-100' },
                 { value: 'High',   label: '🔴 High (≥70%)',   color: 'bg-red-500 text-white',     inactive: 'border border-red-200 bg-white text-red-600 hover:bg-red-50' },
                 { value: 'Medium', label: '🟡 Medium (30–69%)', color: 'bg-amber-500 text-white',   inactive: 'border border-amber-200 bg-white text-amber-600 hover:bg-amber-50' },
                 { value: 'Low',    label: '🟢 Low (<30%)',    color: 'bg-emerald-500 text-white', inactive: 'border border-emerald-200 bg-white text-emerald-700 hover:bg-emerald-50' },
@@ -320,12 +341,15 @@ export default function AdminStaffPage() {
           >
             <div className="flex items-center gap-3">
               <CheckSquare className="h-4 w-4 text-blue-600" />
-              <span className="text-[13px] font-semibold text-blue-800">{selectedStaffIds.length} staf dipilih</span>
+              <span className="text-[13px] font-semibold text-blue-800">
+                {selectedStaffIds.length} {t('staffView.staffSelected') ?? 'staf dipilih'}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <button type="button" onClick={() => setConfirmMode('bulk')} disabled={unassignedCount === 0}
                 className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50">
-                <Sparkles className="h-3.5 w-3.5" /> Auto-assign ke {selectedStaffIds.length} staf
+                <Sparkles className="h-3.5 w-3.5" /> 
+                {lang === 'en' ? `Auto-assign to ${selectedStaffIds.length} staff` : `Auto-assign ke ${selectedStaffIds.length} staf`}
               </button>
               <button type="button"
                 onClick={() => {
@@ -333,7 +357,7 @@ export default function AdminStaffPage() {
                   if (targets.length) openDrawer(targets[0], targets);
                 }}
                 className="inline-flex items-center gap-2 rounded-xl border border-blue-200 bg-white px-4 py-2 text-[12px] font-semibold text-blue-700 transition hover:border-blue-400">
-                <UserPlus className="h-3.5 w-3.5" /> Assign manual
+                <UserPlus className="h-3.5 w-3.5" /> {t('staffView.manualAssign') ?? 'Assign manual'}
               </button>
               <button type="button" onClick={() => setSelectedStaffIds([])}
                 className="rounded-lg p-1.5 text-blue-400 hover:bg-blue-100">
@@ -352,8 +376,8 @@ export default function AdminStaffPage() {
       ) : staffList.length === 0 ? (
         <div className="text-center py-20 border border-dashed border-[var(--vs-line)] rounded-2xl bg-[var(--vs-bg)]">
           <Users className="w-8 h-8 text-[var(--vs-muted-3)] mx-auto mb-3" />
-          <h3 className="text-sm font-semibold text-[var(--vs-ink)]">Belum ada data staf</h3>
-          <p className="text-xs text-[var(--vs-muted-2)] mt-1">Tambahkan staf di Supabase untuk mulai mendistribusikan tugas.</p>
+          <h3 className="text-sm font-semibold text-[var(--vs-ink)]">{t('staffView.noStaff') ?? 'Belum ada data staf'}</h3>
+          <p className="text-xs text-[var(--vs-muted-2)] mt-1">{t('staffView.noStaffDesc') ?? 'Tambahkan staf di Supabase untuk mulai mendistribusikan tugas.'}</p>
         </div>
       ) : (
         <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.05 }} className="vs-card overflow-hidden">
@@ -366,7 +390,7 @@ export default function AdminStaffPage() {
                       {allSelected ? <CheckSquare className="h-4 w-4 text-blue-600" /> : <Square className="h-4 w-4 text-slate-400" />}
                     </button>
                   </th>
-                  {['Nama Staf', 'Peran', 'Beban Kerja', 'Status', ''].map((h, i) => (
+                  {(lang === 'en' ? ['Staff Name', 'Role', 'Workload', 'Status', ''] : ['Nama Staf', 'Peran', 'Beban Kerja', 'Status', '']).map((h, i) => (
                     <th key={i} className="px-6 py-3.5 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider">{h}</th>
                   ))}
                 </tr>
@@ -413,12 +437,12 @@ export default function AdminStaffPage() {
                       <td className="px-6 py-4">
                         <span className={`vs-tag ${full ? 'vs-tag--high' : nearFull ? 'vs-tag--medium' : 'vs-tag--low'}`}>
                           <Activity className="w-3 h-3" />
-                          {full ? 'Penuh' : nearFull ? 'Hampir Penuh' : 'Normal'}
+                          {full ? (t('staffView.full') ?? 'Penuh') : nearFull ? (t('staffView.nearFull') ?? 'Hampir Penuh') : (t('staffView.normal') ?? 'Normal')}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-400 group-hover:text-blue-600 transition-colors">
-                          Detail <ChevronRight className="h-3.5 w-3.5" />
+                          {t('staffView.detail') ?? 'Detail'} <ChevronRight className="h-3.5 w-3.5" />
                         </span>
                       </td>
                     </tr>

@@ -125,52 +125,51 @@ function AdminCustomerInner() {
   const closeDetail = () => {
     router.replace(hrefWithoutCustomerDetail(pathname, searchParams), { scroll: false });
   };
-
   const handleDelete = async (id, name) => {
     const ok = await confirm({
-      title: 'Hapus Pelanggan',
-      message: `Yakin hapus ${name}?`,
-      confirmText: 'Hapus',
-      cancelText: 'Batal',
+      title: t('customer.deleteTitle'),
+      message: t('customer.deleteConfirm', { name }),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       variant: 'destructive',
     });
     if (!ok) return;
     const { error } = await supabase.from('customers').delete().eq('id', id);
     if (error) {
-      toast('Gagal menghapus', 'error');
+      toast(t('customer.deleteError'), 'error');
       return;
     }
     setCustomers((prev) => prev.filter((c) => c.id !== id));
     setSelectedIds((prev) => prev.filter((x) => x !== id));
-    toast(`${name} berhasil dihapus`, 'success');
+    toast(t('customer.deleteSuccess', { name }), 'success');
   };
-
+ 
   const handleBulkDelete = async () => {
     const ok = await confirm({
-      title: 'Hapus Massal',
-      message: `Hapus ${selectedIds.length} pelanggan?`,
-      confirmText: 'Hapus',
-      cancelText: 'Batal',
+      title: t('customer.bulkDeleteTitle'),
+      message: t('customer.bulkDeleteConfirm', { count: selectedIds.length }),
+      confirmText: t('common.delete'),
+      cancelText: t('common.cancel'),
       variant: 'destructive',
     });
     if (!ok) return;
     const { error } = await supabase.from('customers').delete().in('id', selectedIds);
     if (error) {
-      toast('Gagal menghapus', 'error');
+      toast(t('customer.deleteError'), 'error');
       return;
     }
     setCustomers((prev) => prev.filter((c) => !selectedIds.includes(c.id)));
-    toast(`${selectedIds.length} pelanggan dihapus`, 'success');
+    toast(t('customer.bulkDeleteSuccess', { count: selectedIds.length }), 'success');
     setSelectedIds([]);
   };
-
+ 
   const handleExport = () => {
     if (filtered.length === 0) {
-      toast('Tidak ada data untuk di-export', 'warning');
+      toast(t('customer.noExportData'), 'warning');
       return;
     }
     exportToCSV(filtered, 'customers');
-    toast(`${filtered.length} pelanggan berhasil di-export`, 'success');
+    toast(t('customer.exportSuccess', { count: filtered.length }), 'success');
   };
 
   const riskTag = (lvl) => {
@@ -202,24 +201,23 @@ function AdminCustomerInner() {
 
   return (
     <DashboardShell
-      title={t('data.title')}
-      description="Pantau seluruh pelanggan, kelola risiko churn, dan awasi MRR mereka."
+      title={t('customer.title')}
+      description={t('customer.subtitle')}
       icon={Users}
       actions={(
         <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
           <Button onClick={handleExport} variant="outline" className="shrink-0 gap-2">
-            <Download className="h-4 w-4" /> Export CSV
+            <Download className="h-4 w-4" /> {t('customer.exportCsv')}
           </Button>
           {selectedIds.length > 0 && (
             <Button variant="destructive" onClick={handleBulkDelete} className="shrink-0 gap-2">
-              <Trash2 className="h-4 w-4" /> Hapus ({selectedIds.length})
+              <Trash2 className="h-4 w-4" /> {t('common.delete')} ({selectedIds.length})
             </Button>
           )}
         </div>
       )}
     >
       <div className="space-y-6">
-
         {/* bagian kpi */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.05, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
@@ -231,9 +229,9 @@ function AdminCustomerInner() {
             <div className="text-2xl lg:text-3xl font-bold text-[var(--vs-ink)]">
               {loading ? '-' : filtered.length}
             </div>
-            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Total Pelanggan</div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">{t('customer.totalCustomers')}</div>
           </motion.div>
-
+ 
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.12, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-50">
@@ -243,9 +241,9 @@ function AdminCustomerInner() {
             <div className="text-2xl lg:text-3xl font-bold text-red-600 truncate" title={formatCurrency(revenueAtRisk)}>
               {loading ? '-' : formatCurrency(revenueAtRisk)}
             </div>
-            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Pendapatan Berisiko</div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">{t('customer.revenueAtRisk')}</div>
           </motion.div>
-
+ 
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.19, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-orange-50">
@@ -255,9 +253,9 @@ function AdminCustomerInner() {
             <div className="text-2xl lg:text-3xl font-bold text-orange-600">
               {loading ? '-' : highRiskCount}
             </div>
-            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Risiko Tinggi</div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">{t('customer.highRisk')}</div>
           </motion.div>
-
+ 
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.26, ease:[0.16,1,0.3,1] }} className="vs-card p-5">
             <div className="flex items-center justify-between mb-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50">
@@ -267,7 +265,7 @@ function AdminCustomerInner() {
             <div className="text-2xl lg:text-3xl font-bold text-amber-600">
               {loading ? '-' : `${avgChurnScore}%`}
             </div>
-            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">Rata-rata Skor Churn</div>
+            <div className="text-[12px] font-medium text-[var(--vs-muted-2)] mt-1">{t('customer.avgChurnScore')}</div>
           </motion.div>
         </div>
 
@@ -277,53 +275,58 @@ function AdminCustomerInner() {
           <div className="relative w-[220px] shrink-0">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--vs-muted-3)]" />
             <Input
-              placeholder="Cari nama atau ID..."
+              placeholder={t('customer.searchPlaceholder')}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="border-[var(--vs-line)] bg-[var(--vs-bg)] pl-9 w-full focus:border-[var(--vs-brand-200)]"
             />
           </div>
-
+ 
           <div className="h-6 w-px bg-slate-200 shrink-0" />
-
+ 
           {/* Risk pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Risiko</span>
-            {['Semua', 'Tinggi', 'Sedang', 'Rendah'].map((r) => {
-              const active = riskFilter === r;
-              const dot = r === 'High' ? 'bg-red-500' : r === 'Medium' ? 'bg-amber-500' : r === 'Low' ? 'bg-emerald-500' : null;
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">{t('customer.risk')}</span>
+            {[
+              { value: 'Semua', label: t('customer.all') },
+              { value: 'High', label: t('customer.high') },
+              { value: 'Medium', label: t('customer.medium') },
+              { value: 'Low', label: t('customer.low') }
+            ].map(({ value, label }) => {
+              const active = riskFilter === value;
+              const dot = value === 'High' ? 'bg-red-500' : value === 'Medium' ? 'bg-amber-500' : value === 'Low' ? 'bg-emerald-500' : null;
               return (
-                <button key={r} onClick={() => setRiskFilter(r)}
+                <button key={value} onClick={() => setRiskFilter(value)}
                   className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-[12px] font-semibold transition-all border ${
                     active ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'
                   }`}>
                   {dot && <span className={`h-2 w-2 rounded-full ${dot}`} />}
-                  {r}
+                  {label}
                 </button>
               );
             })}
           </div>
-
+ 
           <div className="h-6 w-px bg-slate-200 shrink-0" />
-
+ 
           {/* Plan pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
-            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">Paket</span>
+            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider shrink-0">{t('customer.plan')}</span>
             {planOptions.map((p) => (
               <button key={p} onClick={() => setPlanFilter(p)}
                 className={`rounded-full px-3 py-1 text-[12px] font-semibold transition-all border ${
                   planFilter === p ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400 hover:text-slate-800'
                 }`}>
-                {p}
+                {p === 'Semua' ? t('customer.all') : p}
               </button>
             ))}
           </div>
-
+ 
           {/* Reset */}
           {(riskFilter !== 'Semua' || planFilter !== 'Semua') && (
             <button onClick={() => { setRiskFilter('Semua'); setPlanFilter('Semua'); }}
               className="ml-auto flex items-center gap-1 text-[12px] font-medium text-slate-400 hover:text-slate-700 transition-colors shrink-0">
-              <X className="w-3.5 h-3.5" /> Reset
+              <X className="w-3.5 h-3.5" /> {t('customer.reset')}
             </button>
           )}
         </motion.div>
@@ -339,8 +342,8 @@ function AdminCustomerInner() {
               <div className="mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[var(--vs-bg-2)]">
                 <Search className="h-5 w-5 text-[var(--vs-muted-3)]" />
               </div>
-              <div className="mb-1 text-[14px] font-semibold text-[var(--vs-ink)]">Tidak ada pelanggan</div>
-              <div className="text-[12px] text-[var(--vs-muted-2)]">Tidak ada data yang cocok.</div>
+              <div className="mb-1 text-[14px] font-semibold text-[var(--vs-ink)]">{t('customer.noData')}</div>
+              <div className="text-[12px] text-[var(--vs-muted-2)]">{lang === 'en' ? 'No matching data.' : 'Tidak ada data yang cocok.'}</div>
             </div>
           ) : (
             <>
@@ -356,7 +359,7 @@ function AdminCustomerInner() {
                           onChange={toggleAll}
                         />
                       </th>
-                      {['Pelanggan', 'Tipe', 'Paket', 'MRR', 'Skor Churn', 'Tingkat Risiko', 'Ditugaskan', 'Aksi'].map((h) => (
+                      {[t('customer.company'), t('customer.type') ?? (lang === 'en' ? 'Type' : 'Tipe'), t('customer.plan'), 'MRR', t('customer.churnScore'), t('customer.riskLevel'), t('customer.assignedTo'), t('customer.action') ?? (lang === 'en' ? 'Action' : 'Aksi')].map((h) => (
                         <th key={h} className="whitespace-nowrap px-3 py-3.5 text-[11px] font-semibold uppercase tracking-wider text-[var(--vs-muted-2)]">
                           {h}
                         </th>
@@ -420,7 +423,7 @@ function AdminCustomerInner() {
                                 <span className="truncate max-w-[90px]">{c.staff.full_name}</span>
                               </div>
                             ) : (
-                              <span className="italic text-[var(--vs-muted-3)]">Belum Ditugaskan</span>
+                              <span className="italic text-[var(--vs-muted-3)]">{t('customer.unassigned')}</span>
                             )}
                           </td>
                           <td className="px-3 py-3.5">
@@ -440,25 +443,24 @@ function AdminCustomerInner() {
                   </tbody>
                 </table>
               </div>
-
               {/* pagination controls */}
               <div className="p-4 border-t border-[var(--vs-line)] bg-slate-50/50 flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div className="flex items-center gap-3">
-                  <span className="text-[12px] text-[var(--vs-muted-2)] font-medium">Tampilkan:</span>
+                  <span className="text-[12px] text-[var(--vs-muted-2)] font-medium">{t('customer.showRows') ?? 'Tampilkan:'}</span>
                   <select
                     value={rowsPerPage}
                     onChange={(e) => setRowsPerPage(Number(e.target.value))}
                     className="border border-[var(--vs-line)] bg-white rounded-lg px-2 py-1 text-[12px] font-bold focus:outline-none focus:border-[var(--vs-brand)]"
                   >
-                    <option value={50}>50 Row</option>
-                    <option value={100}>100 Row</option>
-                    <option value={250}>250 Row</option>
+                    <option value={50}>50 {t('customer.rows') ?? 'Row'}</option>
+                    <option value={100}>100 {t('customer.rows') ?? 'Row'}</option>
+                    <option value={250}>250 {t('customer.rows') ?? 'Row'}</option>
                   </select>
                   <span className="text-[12px] text-[var(--vs-muted-2)] italic">
-                    Menampilkan {startIndex + 1} - {Math.min(startIndex + rowsPerPage, filtered.length)} dari {filtered.length}
+                    {t('customer.paginationInfo', { start: startIndex + 1, end: Math.min(startIndex + rowsPerPage, filtered.length), total: filtered.length })}
                   </span>
                 </div>
-
+ 
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
@@ -467,11 +469,11 @@ function AdminCustomerInner() {
                     onClick={() => setCurrentPage(prev => prev - 1)}
                     className="h-8 px-2 gap-1"
                   >
-                    <ChevronLeft className="w-4 h-4" /> Prev
+                    <ChevronLeft className="w-4 h-4" /> {t('customer.prev') ?? 'Prev'}
                   </Button>
                   <div className="flex items-center gap-1">
                     <span className="text-[12px] font-semibold px-3 py-1 bg-white border border-[var(--vs-line)] rounded-lg">
-                      Page {currentPage} / {totalPages}
+                      {t('customer.pageOf', { current: currentPage, total: totalPages })}
                     </span>
                   </div>
                   <Button
@@ -481,7 +483,7 @@ function AdminCustomerInner() {
                     onClick={() => setCurrentPage(prev => prev + 1)}
                     className="h-8 px-2 gap-1"
                   >
-                    Next <ChevronRight className="w-4 h-4" />
+                    {t('customer.next') ?? 'Next'} <ChevronRight className="w-4 h-4" />
                   </Button>
                 </div>
               </div>
@@ -503,8 +505,9 @@ function AdminCustomerInner() {
 }
 
 function AdminCustomerFallback() {
+  const { t } = useLang();
   return (
-    <DashboardShell title="Pelanggan" description="Memuat…" icon={Users}>
+    <DashboardShell title={t('customer.title')} description={t('customer.loading')} icon={Users}>
       <div className="flex items-center justify-center p-16">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--vs-brand)] border-t-transparent" />
       </div>

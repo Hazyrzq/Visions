@@ -67,7 +67,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
   const handleSave = async () => {
     const name = fullName.trim();
     if (!name) {
-      toast('Nama tidak boleh kosong', 'error');
+      toast(t('profileWorkspace.nameRequired'), 'error');
       return;
     }
     if (!user?.id) return;
@@ -75,7 +75,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
     const { error } = await supabase.from('profiles').update({ full_name: name }).eq('id', user.id);
     setSaving(false);
     if (error) {
-      toast(error.message || 'Gagal menyimpan', 'error');
+      toast(error.message || t('profileWorkspace.saveError'), 'error');
       return;
     }
     await refreshProfile();
@@ -98,7 +98,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
           className="group mb-6 inline-flex items-center gap-2 rounded-full border border-slate-200/90 bg-white px-3 py-2 text-[13px] font-semibold text-slate-600 shadow-sm transition-colors hover:border-[var(--vs-brand-200)] hover:text-[var(--vs-brand)]"
         >
           <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-          Kembali ke dashboard
+          {t('profileWorkspace.backToDashboard')}
         </Link>
 
         <div className="vs-card overflow-hidden p-0">
@@ -107,7 +107,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
               {initials(profile?.full_name)}
             </div>
             <h1 className="mt-5 text-2xl font-bold tracking-tight text-[var(--vs-ink)] sm:text-[1.65rem]">
-              {profile?.full_name ?? 'Pengguna'}
+              {profile?.full_name ?? t('hero.defaultUser')}
             </h1>
             <p className="mt-1 truncate text-[14px] font-medium text-[var(--vs-muted)]">{user?.email}</p>
             <span className="mt-4 inline-flex items-center rounded-full border border-[var(--vs-brand-100)] bg-white/80 px-3 py-1 text-[12px] font-semibold text-[var(--vs-brand)] shadow-sm">
@@ -118,7 +118,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
           </div>
 
           <div className="flex items-center justify-between gap-3 border-b border-[var(--vs-line-soft)] px-5 py-4 sm:px-6">
-            <h2 className="text-[13px] font-bold uppercase tracking-wider text-[var(--vs-muted-2)]">Informasi akun</h2>
+            <h2 className="text-[13px] font-bold uppercase tracking-wider text-[var(--vs-muted-2)]">{t('profileWorkspace.accountInfo')}</h2>
             {!editing ? (
               <button
                 type="button"
@@ -126,7 +126,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                 className="inline-flex items-center gap-2 rounded-full border border-[var(--vs-line)] bg-white px-3 py-1.5 text-[12px] font-semibold text-[var(--vs-ink)] shadow-sm transition-colors hover:border-[var(--vs-brand-200)] hover:text-[var(--vs-brand)]"
               >
                 <Pencil className="h-3.5 w-3.5" />
-                Edit
+                {t('common.edit')}
               </button>
             ) : (
               <div className="flex flex-wrap items-center justify-end gap-2">
@@ -137,7 +137,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                   className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-[12px] font-semibold text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-50"
                 >
                   <X className="h-3.5 w-3.5" />
-                  Batal
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -146,7 +146,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                   className="inline-flex items-center gap-1.5 rounded-full bg-[var(--vs-brand)] px-3 py-1.5 text-[12px] font-semibold text-white shadow-sm transition-opacity hover:opacity-95 disabled:opacity-50"
                 >
                   <Check className="h-3.5 w-3.5" />
-                  {saving ? 'Menyimpan…' : t('common.save')}
+                  {saving ? t('profileWorkspace.saving') : t('common.save')}
                 </button>
               </div>
             )}
@@ -164,7 +164,7 @@ function ProfileWorkspaceContent({ dashboardHome }) {
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
                     className="mt-2 h-10 border-[var(--vs-line)] bg-[var(--vs-surface)] text-[14px] focus-visible:border-[var(--vs-brand-200)]"
-                    placeholder="Nama Anda"
+                    placeholder={t('profileWorkspace.namePlaceholder')}
                     autoComplete="name"
                   />
                 ) : (

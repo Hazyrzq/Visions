@@ -8,23 +8,24 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 // ── helpers ───────────────────────────────────────────────────────────
 function initials(name) {
   if (!name) return '?';
   return name.split(' ').filter(Boolean).slice(0, 2).map(n => n[0]).join('').toUpperCase();
 }
-function formatTime(iso) {
+function formatTime(iso, lang = 'id') {
   if (!iso) return '';
-  return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString(lang === 'en' ? 'en-US' : 'id-ID', { hour: '2-digit', minute: '2-digit' });
 }
-function formatDay(iso) {
+function formatDay(iso, lang = 'id', t) {
   if (!iso) return '';
   const d = new Date(iso), today = new Date();
-  if (d.toDateString() === today.toDateString()) return 'Hari ini';
+  if (d.toDateString() === today.toDateString()) return t('teamChat.today');
   const y = new Date(today); y.setDate(today.getDate() - 1);
-  if (d.toDateString() === y.toDateString()) return 'Kemarin';
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' });
+  if (d.toDateString() === y.toDateString()) return t('teamChat.yesterday');
+  return d.toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'long' });
 }
 function parseMsg(text = '') {
   const match = text.match(/^\[REPLY:(.+?)\|(.+?)\]\n([\s\S]*)$/);
@@ -101,6 +102,7 @@ function EmojiPicker({ onSelect, onClose }) {
 
 // ════════════════════════════════════════════════════════════════════
 export default function TeamChat() {
+  const { t, lang } = useLang();
   const { profile } = useAuth();
   const [contacts, setContacts]         = useState([]);
   const [profilesById, setProfilesById] = useState({});
@@ -259,7 +261,7 @@ export default function TeamChat() {
   const grouped = [];
   let lastDay = '', lastSender = '';
   displayMsgs.forEach((msg, i) => {
-    const day = formatDay(msg.created_at);
+    const day = formatDay(msg.created_at, lang, t);
     if (day !== lastDay) { grouped.push({ type: 'sep', label: day, key: `sep-${msg.id}` }); lastDay = day; lastSender = ''; }
     const sameAsPrev = lastSender === msg.sender_id;
     grouped.push({ type: 'msg', ...msg, sameAsPrev });
@@ -291,7 +293,7 @@ export default function TeamChat() {
                 <p className="truncate text-[14px] font-bold text-slate-900">{profile.full_name}</p>
                 <span className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-600">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  available
+                  {t('teamChat.available')}
                 </span>
               </div>
             </div>
@@ -342,13 +344,13 @@ export default function TeamChat() {
                     Team Chat
                   </p>
                   {lastGroup && (
-                    <span className="shrink-0 text-[11px] text-slate-400">{formatTime(lastGroup.created_at)}</span>
+                    <span className="shrink-0 text-[11px] text-slate-400">{formatTime(lastGroup.created_at, lang)}</span>
                   )}
                 </div>
                 <p className="mt-0.5 truncate text-[12px] text-slate-400">
                   {lastGroup
                     ? `${profilesById[lastGroup.sender_id]?.full_name?.split(' ')[0]}: ${parseMsg(lastGroup.message).body}`
-                    : 'Ruang diskusi tim'}
+                    : t('teamChat.discRoom')}
                 </p>
               </div>
             </button>
@@ -365,7 +367,7 @@ export default function TeamChat() {
                 </div>
               ))
             ) : filteredContacts.length === 0 ? (
-              <p className="py-8 text-center text-[12px] text-slate-400">Tidak ditemukan</p>
+              <p className="py-8 text-center text-[12px] text-slate-400">{t('teamChat.notFound')}</p>
             ) : filteredContacts.map(c => {
               const last    = lastMsgFrom(c.id);
               const unread  = unreadFrom(c.id);
@@ -388,13 +390,13 @@ export default function TeamChat() {
                         {c.full_name}
                       </p>
                       {last && (
-                        <span className="shrink-0 text-[11px] text-slate-400">{formatTime(last.created_at)}</span>
+                        <span className="shrink-0 text-[11px] text-slate-400">{formatTime(last.created_at, lang)}</span>
                       )}
                     </div>
                     <p className={`mt-0.5 truncate text-[12px] ${typing ? 'italic text-blue-600' : 'text-slate-400'}`}>
-                      {typing ? 'mengetik...' : last
-                        ? (last.sender_id === profile.id ? `Anda: ${parseMsg(last.message).body}` : parseMsg(last.message).body)
-                        : <span className="capitalize">{c.role}</span>}
+                      {typing ? t('teamChat.typing') : last
+                        ? (last.sender_id === profile.id ? `${t('teamChat.you')}: ${parseMsg(last.message).body}` : parseMsg(last.message).body)
+                        : <span className="capitalize">{c.role === 'admin' ? t('role.admin') : t('role.staff')}</span>}
                     </p>
                   </div>
                   {unread > 0 && !isActive && (
@@ -418,15 +420,15 @@ export default function TeamChat() {
                 <Hash className="h-9 w-9 text-slate-300" />
               </div>
               <div className="text-center">
-                <p className="text-[15px] font-bold text-slate-700">Pilih percakapan</p>
-                <p className="mt-1 text-[13px] text-slate-400">Pilih anggota tim atau buka Team Chat</p>
+                <p className="text-[15px] font-bold text-slate-700">{t('teamChat.chooseConv')}</p>
+                <p className="mt-1 text-[13px] text-slate-400">{t('teamChat.chooseConvDesc')}</p>
               </div>
               <button
                 type="button"
                 onClick={() => setActiveChat('group')}
                 className="mt-1 rounded-xl bg-blue-600 px-6 py-2.5 text-[13px] font-semibold text-white shadow-sm shadow-blue-600/20 transition-all hover:bg-blue-700 active:scale-95"
               >
-                Buka Team Chat
+                {t('teamChat.openTeamChat')}
               </button>
             </div>
           ) : (
@@ -448,15 +450,15 @@ export default function TeamChat() {
                       {activeChat === 'group' ? 'Group Chat' : activeContact?.full_name}
                     </p>
                     {activeChat === 'group' ? (
-                      <p className="text-[12px] text-slate-400">{contacts.length + 1} anggota</p>
+                      <p className="text-[12px] text-slate-400">{contacts.length + 1} {t('teamChat.members')}</p>
                     ) : (
                       <p className="text-[12px] text-slate-400">
                         {isOnline ? (
                           <span className="flex items-center gap-1 text-emerald-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />Online
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{t('teamChat.online')}
                           </span>
                         ) : (
-                          <span className="capitalize">{activeContact?.role}</span>
+                          <span className="capitalize">{activeContact?.role === 'admin' ? t('role.admin') : t('role.staff')}</span>
                         )}
                       </p>
                     )}
@@ -477,7 +479,7 @@ export default function TeamChat() {
                             : 'text-slate-500 hover:text-slate-700'
                         }`}
                       >
-                        {tab === 'messages' ? 'Messages' : 'Participants'}
+                        {tab === 'messages' ? t('teamChat.messagesTab') : t('teamChat.participantsTab')}
                       </button>
                     ))}
                   </div>
@@ -510,16 +512,16 @@ export default function TeamChat() {
                 /* Participants list */
                 <div className="tc-scroll flex-1 overflow-y-auto px-6 py-5">
                   <p className="mb-4 text-[12px] font-bold uppercase tracking-widest text-slate-400">
-                    Anggota tim — {contacts.length + 1} orang
+                    {t('teamChat.teamMembers', { count: contacts.length + 1 })}
                   </p>
                   {/* Self */}
                   <div className="mb-2 flex items-center gap-3 rounded-2xl px-3 py-3 bg-blue-50">
                     <Avatar name={profile.full_name} size={44} online={true} />
                     <div className="flex-1 min-w-0">
-                      <p className="truncate text-[13px] font-bold text-blue-700">{profile.full_name} <span className="text-slate-400 font-normal">(Anda)</span></p>
-                      <p className="capitalize text-[12px] text-slate-400">{profile.role}</p>
+                      <p className="truncate text-[13px] font-bold text-blue-700">{profile.full_name} <span className="text-slate-400 font-normal">({t('teamChat.youLabel')})</span></p>
+                      <p className="capitalize text-[12px] text-slate-400">{profile.role === 'admin' ? t('role.admin') : t('role.staff')}</p>
                     </div>
-                    <span className="text-[11px] font-semibold text-emerald-500">online</span>
+                    <span className="text-[11px] font-semibold text-emerald-500">{t('teamChat.online')}</span>
                   </div>
                   {contacts.map(c => {
                     const online = onlineUsers.includes(c.id);
@@ -528,10 +530,10 @@ export default function TeamChat() {
                         <Avatar name={c.full_name} size={44} online={online} />
                         <div className="flex-1 min-w-0">
                           <p className="truncate text-[13px] font-bold text-slate-900">{c.full_name}</p>
-                          <p className="capitalize text-[12px] text-slate-400">{c.role}</p>
+                          <p className="capitalize text-[12px] text-slate-400">{c.role === 'admin' ? t('role.admin') : t('role.staff')}</p>
                         </div>
                         <span className={`text-[11px] font-semibold ${online ? 'text-emerald-500' : 'text-slate-300'}`}>
-                          {online ? 'online' : 'offline'}
+                          {online ? t('teamChat.online') : t('teamChat.offline')}
                         </span>
                       </div>
                     );
@@ -552,9 +554,9 @@ export default function TeamChat() {
                           : <Avatar name={activeContact?.full_name} size={36} />}
                       </div>
                       <div>
-                        <p className="text-[14px] font-semibold text-slate-600">Mulai percakapan</p>
+                        <p className="text-[14px] font-semibold text-slate-600">{t('teamChat.startConv')}</p>
                         <p className="mt-1 text-[12px] text-slate-400">
-                          {activeChat === 'group' ? 'Kirim pesan ke seluruh tim' : `Kirim pesan ke ${activeContact?.full_name}`}
+                          {activeChat === 'group' ? t('teamChat.sendToTeam') : t('teamChat.sendToUser', { name: activeContact?.full_name })}
                         </p>
                       </div>
                     </div>
@@ -607,13 +609,11 @@ export default function TeamChat() {
                                 </p>
                               )}
 
-                              {/* Reply preview */}
-                              {rName && (
-                                <div className={`mb-1 rounded-xl border-l-2 px-3 py-2 text-[12px] ${
-                                  isMe ? 'border-blue-300 bg-blue-100 text-blue-800' : 'border-blue-400 bg-white text-slate-600'
-                                }`}>
-                                  <p className="mb-0.5 font-bold text-blue-600">{rName}</p>
-                                  <p className="truncate opacity-80">{rQuote}</p>
+                              {/* Reply quote visualization */}
+                              {rQuote && (
+                                <div className={`mb-1.5 rounded-lg border-l-2 border-slate-300 bg-slate-100 p-2 text-[11px] text-slate-500`}>
+                                  <span className="font-bold text-slate-700">{rName}</span>
+                                  <p className="truncate">{rQuote}</p>
                                 </div>
                               )}
 
@@ -635,17 +635,18 @@ export default function TeamChat() {
                                 </div>
                                 <button
                                   type="button"
-                                  onClick={() => setReplyTo({ id: msg.id, name: sName ?? 'Anda', text: body })}
+                                  onClick={() => setReplyTo({ id: msg.id, name: sName ?? t('teamChat.you'), text: body })}
                                   className={`absolute top-1 opacity-0 group-hover:opacity-100 transition-opacity flex h-7 w-7 items-center justify-center rounded-full bg-white border border-slate-200 shadow-sm text-slate-400 hover:text-blue-600 ${isMe ? '-left-9' : '-right-9'}`}
                                 >
                                   <CornerUpLeft className="h-3.5 w-3.5" />
                                 </button>
                               </div>
 
+
                               {/* Read indicator (DM only) */}
                               {isMe && activeChat !== 'group' && (
                                 <p className={`mt-1 text-right text-[10px] ${dmRead ? 'text-blue-600 font-semibold' : 'text-slate-300'}`}>
-                                  {dmRead ? '✓✓ Dibaca' : '✓ Terkirim'}
+                                  {dmRead ? t('teamChat.read') : t('teamChat.sent')}
                                 </p>
                               )}
                             </div>
@@ -721,9 +722,9 @@ export default function TeamChat() {
                         onChange={handleInputChange}
                         onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) handleSend(e); }}
                         placeholder={
-                          replyTo ? 'Ketik balasan...'
-                          : activeChat === 'group' ? 'Write your message...'
-                          : `Write your message...`
+                          replyTo ? t('teamChat.typeReply')
+                          : activeChat === 'group' ? t('teamChat.writeMessage')
+                          : t('teamChat.writeMessage')
                         }
                         className="flex-1 bg-transparent text-[13px] text-slate-700 outline-none placeholder:text-slate-400"
                       />
@@ -767,13 +768,13 @@ export default function TeamChat() {
               </p>
               <p className="mt-1 text-[12px] text-slate-400">
                 {activeChat === 'group'
-                  ? `${contacts.length + 1} anggota`
-                  : <span className="capitalize">{activeContact?.role}</span>}
+                  ? `${contacts.length + 1} ${t('teamChat.members')}`
+                  : <span className="capitalize">{activeContact?.role === 'admin' ? t('role.admin') : t('role.staff')}</span>}
               </p>
               {activeChat !== 'group' && isOnline && (
                 <span className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-600">
                   <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                  Online
+                  {t('teamChat.online')}
                 </span>
               )}
             </div>
@@ -786,11 +787,11 @@ export default function TeamChat() {
                     <p className="text-[20px] font-bold text-slate-900">
                       {messages.filter(m => m.receiver_id === null).length}
                     </p>
-                    <p className="mt-0.5 text-[11px] text-slate-400">Pesan</p>
+                    <p className="mt-0.5 text-[11px] text-slate-400">{t('teamChat.messagesCount')}</p>
                   </div>
                   <div className="rounded-2xl bg-slate-50 px-4 py-3 text-center">
                     <p className="text-[20px] font-bold text-slate-900">{contacts.length + 1}</p>
-                    <p className="mt-0.5 text-[11px] text-slate-400">Anggota</p>
+                    <p className="mt-0.5 text-[11px] text-slate-400">{t('teamChat.participantsTab')}</p>
                   </div>
                 </div>
               </div>
@@ -799,7 +800,7 @@ export default function TeamChat() {
             {/* Members / quick info */}
             <div className="tc-scroll flex-1 overflow-y-auto px-5 py-4">
               <p className="mb-3 text-[11px] font-bold uppercase tracking-widest text-slate-400">
-                {activeChat === 'group' ? 'Anggota' : 'Info'}
+                {activeChat === 'group' ? t('teamChat.participantsTab') : t('teamChat.info')}
               </p>
               {activeChat === 'group' ? (
                 <div className="space-y-2">
@@ -808,7 +809,7 @@ export default function TeamChat() {
                     <Avatar name={profile.full_name} size={36} online={true} />
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-[12px] font-semibold text-slate-800">{profile.full_name}</p>
-                      <p className="capitalize text-[11px] text-slate-400">{profile.role}</p>
+                      <p className="capitalize text-[11px] text-slate-400">{profile.role === 'admin' ? t('role.admin') : t('role.staff')}</p>
                     </div>
                     <span className="h-2 w-2 rounded-full bg-emerald-400" />
                   </div>
@@ -819,7 +820,7 @@ export default function TeamChat() {
                         <Avatar name={c.full_name} size={36} online={online} />
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[12px] font-semibold text-slate-800">{c.full_name}</p>
-                          <p className="capitalize text-[11px] text-slate-400">{c.role}</p>
+                          <p className="capitalize text-[11px] text-slate-400">{c.role === 'admin' ? t('role.admin') : t('role.staff')}</p>
                         </div>
                         <span className={`h-2 w-2 rounded-full ${online ? 'bg-emerald-400' : 'bg-slate-200'}`} />
                       </div>
@@ -829,7 +830,7 @@ export default function TeamChat() {
               ) : (
                 <div className="space-y-3">
                   <div className="rounded-2xl border border-slate-100 p-3">
-                    <p className="text-[11px] text-slate-400">Total pesan</p>
+                    <p className="text-[11px] text-slate-400">{t('teamChat.totalMsgs')}</p>
                     <p className="mt-1 text-[20px] font-bold text-slate-900">
                       {messages.filter(m =>
                         (m.sender_id === activeChat && m.receiver_id === profile.id) ||
@@ -838,10 +839,10 @@ export default function TeamChat() {
                     </p>
                   </div>
                   <div className="rounded-2xl border border-slate-100 p-3">
-                    <p className="text-[11px] text-slate-400">Status</p>
+                    <p className="text-[11px] text-slate-400">{t('teamChat.statusLabel')}</p>
                     <p className={`mt-1 flex items-center gap-1.5 text-[13px] font-semibold ${isOnline ? 'text-emerald-600' : 'text-slate-400'}`}>
                       <span className={`h-2 w-2 rounded-full ${isOnline ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                      {isOnline ? 'Online sekarang' : 'Offline'}
+                      {isOnline ? t('teamChat.onlineNow') : t('teamChat.offline')}
                     </p>
                   </div>
                 </div>

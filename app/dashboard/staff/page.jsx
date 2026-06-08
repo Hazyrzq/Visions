@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { pageVariants, fadeUp, stagger } from '@/lib/motion';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { supabase } from '@/lib/supabase';
+import { useLang } from '@/lib/i18n/LanguageContext';
 import LogipHero from '@/components/dashboard/overview/LogipHero';
 import LogipPerformanceChart from '@/components/dashboard/overview/LogipPerformanceChart';
 import LogipRightColumn from '@/components/dashboard/overview/LogipRightColumn';
@@ -16,12 +17,13 @@ import ChurnScoreBar from '@/components/dashboard/ChurnScoreBar';
 const MONTH_NAMES = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 
 function riskDot(level) {
-  if (level === 'Tinggi') return 'bg-orange-500';
-  if (level === 'Sedang') return 'bg-sky-500';
+  if (level === 'Tinggi' || level === 'High') return 'bg-orange-500';
+  if (level === 'Sedang' || level === 'Medium') return 'bg-sky-500';
   return 'bg-emerald-500';
 }
 
 export default function StaffOverviewPage() {
+  const { t, lang } = useLang();
   const { profile } = useAuth();
   const [myCustomers, setMyCustomers] = useState([]);
   const [activitiesCount, setActivitiesCount] = useState(0);
@@ -61,7 +63,7 @@ export default function StaffOverviewPage() {
     fetchAll();
   }, [profile?.id]);
 
-  const highPriority = myCustomers.filter(c => c.risk_level === 'Tinggi');
+  const highPriority = myCustomers.filter(c => c.risk_level === 'Tinggi' || c.risk_level === 'High');
   const successRate = myCustomers.length > 0
     ? Math.round((myCustomers.filter(c => !c.churn_actual).length / myCustomers.length) * 100)
     : 0;
@@ -71,25 +73,25 @@ export default function StaffOverviewPage() {
 
   const stats = [
     {
-      label: 'Prioritas tinggi',
+      label: t('overview.highPriority') ?? 'Prioritas tinggi',
       value: String(highPriority.length),
-      hint: 'Perlu tindakan',
+      hint: t('overview.needAction') ?? 'Perlu tindakan',
       trend: highPriority.length ? '!' : 'OK',
       color: highPriority.length ? 'text-red-600' : 'text-emerald-600',
       bg: highPriority.length ? 'bg-red-50' : 'bg-emerald-50',
     },
     {
-      label: 'Aktivitas (bulan)',
+      label: t('overview.activityMonth') ?? 'Aktivitas (bulan)',
       value: String(activitiesCount),
-      hint: 'Total tindakan bulan ini',
+      hint: t('overview.totalActionsMonth') ?? 'Total tindakan bulan ini',
       trend: activitiesCount > 0 ? `+${activitiesCount}` : '0',
       color: 'text-[var(--vs-brand)]',
       bg: 'bg-[var(--vs-brand-50)]',
     },
     {
-      label: 'Success rate',
+      label: t('overview.successRate') ?? 'Success rate',
       value: `${successRate}%`,
-      hint: 'Pelanggan tidak churn',
+      hint: t('overview.notChurned') ?? 'Pelanggan tidak churn',
       trend: `${successRate}%`,
       color: 'text-emerald-600',
       bg: 'bg-emerald-50',
@@ -105,8 +107,8 @@ export default function StaffOverviewPage() {
     >
       <div className="space-y-10 xl:col-span-8">
         <LogipHero
-          eyebrow="Staf"
-          subtitle="Fokus ke pelanggan Anda: prioritas, performa, dan aktivitas terbaru."
+          eyebrow={t('role.staff') ?? 'Staf'}
+          subtitle={t('overview.staffSubtitle') ?? 'Fokus ke pelanggan Anda: prioritas, performa, dan aktivitas terbaru.'}
         />
 
         <motion.div variants={stagger} className="grid gap-4 sm:grid-cols-3">
@@ -133,14 +135,14 @@ export default function StaffOverviewPage() {
         <motion.div variants={fadeUp} className="rounded-[24px] border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
           <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Prioritas Anda</h2>
+              <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">{t('overview.yourPriority') ?? 'Prioritas Anda'}</h2>
               <p className="mt-1 text-[13px] text-slate-500">
-                {loading ? 'Memuat...' : `${myCustomers.length} pelanggan — risiko tinggi dulu.`}
+                {loading ? (t('common.loading') ?? 'Memuat...') : (t('overview.yourPriorityDesc', { count: myCustomers.length }) ?? `${myCustomers.length} pelanggan — risiko tinggi dulu.`)}
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
               <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[12px] font-semibold text-slate-600">
-                Selesai <span className="text-slate-900">{donePct}%</span>
+                {t('overview.done') ?? 'Selesai'} <span className="text-slate-900">{donePct}%</span>
               </div>
             </div>
           </div>
@@ -151,7 +153,9 @@ export default function StaffOverviewPage() {
             </div>
           ) : highPriority.length === 0 ? (
             <p className="py-10 text-center text-[13px] text-slate-500">
-              {myCustomers.length === 0 ? 'Belum ada pelanggan yang di-assign.' : 'Tidak ada prioritas tinggi — kerja bagus.'}
+              {myCustomers.length === 0 
+                ? (t('overview.notAssigned') ?? 'Belum ada pelanggan yang di-assign.') 
+                : (t('overview.noHighRiskGreat') ?? 'Tidak ada prioritas tinggi — kerja bagus.')}
             </p>
           ) : (
             <ul className="divide-y divide-slate-100">
@@ -185,7 +189,7 @@ export default function StaffOverviewPage() {
               href="/dashboard/staff/customer"
               className="inline-flex items-center gap-2 text-[13px] font-semibold text-[var(--vs-brand)] hover:underline"
             >
-              Buka pelanggan saya <ArrowRight className="h-4 w-4" />
+              {t('overview.openMy') ?? 'Buka pelanggan saya'} <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
         </motion.div>

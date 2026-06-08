@@ -6,8 +6,7 @@ import { Bell, BellOff, Check, CheckCheck, RefreshCw, AlertTriangle, Info, UserP
 import { getNotifikasi, markNotifikasiRead } from '@/lib/churnshield';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { fadeUp, stagger, pageVariants } from '@/lib/motion';
-
-const FILTERS = ['Semua', 'Belum Dibaca', 'Sudah Dibaca'];
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 function typeIcon(type) {
   if (!type) return Info;
@@ -26,7 +25,7 @@ function typeColor(type) {
   return { bg: 'bg-blue-50', text: 'text-blue-600', ring: 'ring-blue-100' };
 }
 
-function NotifCard({ notif, onRead }) {
+function NotifCard({ notif, onRead, t, lang }) {
   const isRead = notif.is_read || notif.read;
   const Icon = typeIcon(notif.type);
   const colors = typeColor(notif.type);
@@ -48,7 +47,7 @@ function NotifCard({ notif, onRead }) {
               <p className={`text-[13px] font-semibold ${isRead ? 'text-slate-700' : 'text-slate-900'}`}>{notif.title}</p>
             )}
             <p className={`mt-0.5 text-[13px] leading-relaxed ${isRead ? 'text-slate-500' : 'text-slate-700'}`}>
-              {notif.message ?? notif.body ?? notif.content ?? '(Tidak ada konten)'}
+              {notif.message ?? notif.body ?? notif.content ?? (lang === 'en' ? '(No content)' : '(Tidak ada konten)')}
             </p>
           </div>
           {!isRead && (
@@ -56,7 +55,7 @@ function NotifCard({ notif, onRead }) {
               onClick={() => onRead(notif.id)}
               className="shrink-0 rounded-lg border border-blue-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-blue-600 transition hover:bg-blue-50"
             >
-              Tandai Dibaca
+              {t('notifications.markRead') ?? 'Tandai Dibaca'}
             </button>
           )}
         </div>
@@ -71,7 +70,7 @@ function NotifCard({ notif, onRead }) {
           )}
           {(notif.created_at || notif.timestamp) && (
             <span className="text-[11px] text-slate-400">
-              {new Date(notif.created_at ?? notif.timestamp).toLocaleString('id-ID', {
+              {new Date(notif.created_at ?? notif.timestamp).toLocaleString(lang === 'id' ? 'id-ID' : 'en-US', {
                 day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'
               })}
             </span>
@@ -84,12 +83,25 @@ function NotifCard({ notif, onRead }) {
 }
 
 export default function StaffNotifikasiPage() {
+  const { t, lang } = useLang();
   const { profile } = useAuth();
   const [notifications, setNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filter, setFilter] = useState('Semua');
+  
+  const filters = [
+    t('notifications.filterAll') ?? 'Semua', 
+    t('notifications.filterUnread') ?? 'Belum Dibaca', 
+    t('notifications.filterRead') ?? 'Sudah Dibaca'
+  ];
+  
+  const [filter, setFilter] = useState(filters[0]);
   const [markingAll, setMarkingAll] = useState(false);
+
+  // Sync initial filter if language changes
+  useEffect(() => {
+    setFilter(t('notifications.filterAll') ?? 'Semua');
+  }, [lang, t]);
 
   const fetchNotif = useCallback(async () => {
     setLoading(true);
@@ -134,8 +146,9 @@ export default function StaffNotifikasiPage() {
 
   const unreadCount = notifications.filter(n => !n.is_read && !n.read).length;
   const filtered = notifications.filter(n => {
-    if (filter === 'Belum Dibaca') return !n.is_read && !n.read;
-    if (filter === 'Sudah Dibaca') return n.is_read || n.read;
+    const isRead = n.is_read || n.read;
+    if (filter === (t('notifications.filterUnread') ?? 'Belum Dibaca')) return !isRead;
+    if (filter === (t('notifications.filterRead') ?? 'Sudah Dibaca')) return isRead;
     return true;
   });
 
@@ -152,10 +165,12 @@ export default function StaffNotifikasiPage() {
                 </span>
               )}
             </span>
-            <h1 className="text-[22px] font-bold tracking-tight text-slate-900">Notifikasi</h1>
+            <h1 className="text-[22px] font-bold tracking-tight text-slate-900">{t('notifications.title') ?? 'Notifikasi'}</h1>
           </div>
           <p className="text-[13px] text-slate-500">
-            {unreadCount > 0 ? `${unreadCount} notifikasi belum dibaca` : 'Semua notifikasi sudah dibaca'}
+            {unreadCount > 0 
+              ? (lang === 'en' ? `${unreadCount} unread notifications` : `${unreadCount} notifikasi belum dibaca`)
+              : (t('notifications.allRead') ?? 'Semua notifikasi sudah dibaca')}
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -167,20 +182,20 @@ export default function StaffNotifikasiPage() {
             <button onClick={handleMarkAll} disabled={markingAll}
               className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-[12px] font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
               <CheckCheck className="h-4 w-4" />
-              {markingAll ? 'Memproses…' : 'Tandai Semua Dibaca'}
+              {markingAll ? (lang === 'en' ? 'Processing…' : 'Memproses…') : (t('notifications.markAllRead') ?? 'Tandai Semua Dibaca')}
             </button>
           )}
         </div>
       </div>
 
       <div className="flex items-center gap-2">
-        {FILTERS.map(f => (
+        {filters.map(f => (
           <button key={f} onClick={() => setFilter(f)}
             className={`rounded-full px-4 py-1.5 text-[12px] font-semibold transition ${
               filter === f ? 'bg-blue-600 text-white' : 'border border-slate-200 bg-white text-slate-600 hover:border-blue-300 hover:text-blue-700'
             }`}>
             {f}
-            {f === 'Belum Dibaca' && unreadCount > 0 && (
+            {f === (t('notifications.filterUnread') ?? 'Belum Dibaca') && unreadCount > 0 && (
               <span className="ml-1.5 rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] text-white">{unreadCount}</span>
             )}
           </button>
@@ -195,19 +210,23 @@ export default function StaffNotifikasiPage() {
         <div className="flex h-48 flex-col items-center justify-center gap-3">
           <AlertTriangle className="h-10 w-10 text-red-400" />
           <p className="text-[13px] text-red-600">{error}</p>
-          <button onClick={fetchNotif} className="text-[12px] text-blue-600 underline">Coba lagi</button>
+          <button onClick={fetchNotif} className="text-[12px] text-blue-600 underline">
+            {lang === 'en' ? 'Try again' : 'Coba lagi'}
+          </button>
         </div>
       ) : filtered.length === 0 ? (
         <div className="flex h-48 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50">
           <BellOff className="h-10 w-10 text-slate-300" />
           <p className="text-[13px] text-slate-400">
-            {filter === 'Belum Dibaca' ? 'Tidak ada notifikasi belum dibaca' : 'Tidak ada notifikasi'}
+            {filter === (t('notifications.filterUnread') ?? 'Belum Dibaca') 
+              ? (t('notifications.noNotifUnread') ?? 'Tidak ada notifikasi belum dibaca') 
+              : (t('notifications.noNotif') ?? 'Tidak ada notifikasi')}
           </p>
         </div>
       ) : (
         <motion.div variants={stagger} className="space-y-3">
           <AnimatePresence mode="popLayout">
-            {filtered.map(n => <NotifCard key={n.id} notif={n} onRead={handleRead} />)}
+            {filtered.map(n => <NotifCard key={n.id} notif={n} onRead={handleRead} t={t} lang={lang} />)}
           </AnimatePresence>
         </motion.div>
       )}

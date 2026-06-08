@@ -5,11 +5,10 @@ import { Search, ChevronUp, ChevronDown } from 'lucide-react';
 import RiskBadge from '@/components/dashboard/RiskBadge';
 import ChurnScoreBar from '@/components/dashboard/ChurnScoreBar';
 import { TableSkeleton } from '@/components/ui/Skeleton';
-
-const RISK_OPTIONS = ['Semua', 'Tinggi', 'Sedang', 'Rendah'];
-const PLAN_OPTIONS = ['Semua', 'Enterprise', 'Professional', 'Starter'];
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 export default function CustomerTable({ customers, loading, onCustomerOpen }) {
+  const { t, lang } = useLang();
   const router = useRouter();
 
   const [search, setSearch]       = useState('');
@@ -17,6 +16,13 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
   const [planFilter, setPlanFilter] = useState('Semua');
   const [sortKey, setSortKey]     = useState('churn_score');
   const [sortDir, setSortDir]     = useState('desc');
+
+  const riskOptions = [
+    { value: 'Semua', label: t('customer.all') },
+    { value: 'Tinggi', label: t('customer.high') },
+    { value: 'Sedang', label: t('customer.medium') },
+    { value: 'Rendah', label: t('customer.low') }
+  ];
 
   const handleSort = (key) => {
     if (sortKey === key) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -69,7 +75,7 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
         <input
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Cari nama / ID pelanggan…"
+          placeholder={t('customer.searchPlaceholder')}
           className="vs-input w-full pl-9 pr-4 py-2.5"
         />
       </div>
@@ -77,19 +83,19 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
       {/* Filter pills */}
       <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--vs-muted-3)]">Risiko</span>
-          {RISK_OPTIONS.map(o => (
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--vs-muted-3)]">{t('customer.riskLevel') ?? (lang === 'en' ? 'Risk' : 'Risiko')}</span>
+          {riskOptions.map(o => (
             <button
-              key={o}
+              key={o.value}
               type="button"
-              onClick={() => setRiskFilter(o)}
+              onClick={() => setRiskFilter(o.value)}
               className={`rounded-full border px-3 py-1 text-[12px] font-semibold transition-all ${
-                riskFilter === o
-                  ? (o === 'Semua' ? 'border-[var(--vs-brand)] bg-[var(--vs-brand)] text-white' : riskColor[o])
+                riskFilter === o.value
+                  ? (o.value === 'Semua' ? 'border-[var(--vs-brand)] bg-[var(--vs-brand)] text-white' : riskColor[o.value])
                   : 'border-[var(--vs-line)] bg-white text-[var(--vs-muted)] hover:border-[var(--vs-line-2)]'
               }`}
             >
-              {o}
+              {o.label}
             </button>
           ))}
         </div>
@@ -97,7 +103,7 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
         <div className="h-4 w-px bg-[var(--vs-line)] hidden sm:block" />
 
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--vs-muted-3)]">Plan</span>
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--vs-muted-3)]">{t('customer.plan')}</span>
           {planOptions.map(o => (
             <button
               key={o}
@@ -109,13 +115,15 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
                   : 'border-[var(--vs-line)] bg-white text-[var(--vs-muted)] hover:border-[var(--vs-line-2)]'
               }`}
             >
-              {o}
+              {o === 'Semua' ? t('customer.all') : o}
             </button>
           ))}
         </div>
       </div>
 
-      <div className="text-[12px] text-[var(--vs-muted-2)] mb-3">{filtered.length} pelanggan ditemukan</div>
+      <div className="text-[12px] text-[var(--vs-muted-2)] mb-3">
+        {lang === 'en' ? `${filtered.length} customers found` : `${filtered.length} pelanggan ditemukan`}
+      </div>
 
       <div className="vs-card overflow-hidden">
         {loading ? (
@@ -126,19 +134,19 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
               <thead>
                 <tr className="bg-[var(--vs-bg)] border-b border-[var(--vs-line)]">
                   <Th col="customer_id"       label="ID" />
-                  <Th col="company_name"      label="Pelanggan" />
-                  <Th col="plan_type"         label="Plan" />
-                  <Th col="churn_score"       label="Churn Score" />
-                  <Th col="risk_level"        label="Risiko" />
-                  <Th col="avg_usage_hrs"  label="Usage" />
-                  <Th col="total_tickets"  label="Tiket" />
-                  <Th col="avg_nps_score"  label="NPS" />
-                  <Th col="days_since_login"  label="Last Login" />
+                  <Th col="company_name"      label={t('customer.company')} />
+                  <Th col="plan_type"         label={t('customer.plan')} />
+                  <Th col="churn_score"       label={t('customer.churnScore')} />
+                  <Th col="risk_level"        label={t('customer.riskLevel')} />
+                  <Th col="avg_usage_hrs"     label={lang === 'en' ? 'Usage' : 'Penggunaan'} />
+                  <Th col="total_tickets"     label={lang === 'en' ? 'Tickets' : 'Tiket'} />
+                  <Th col="avg_nps_score"     label="NPS" />
+                  <Th col="days_since_login"  label={lang === 'en' ? 'Last Login' : 'Login Terakhir'} />
                 </tr>
               </thead>
               <tbody className="divide-y divide-[var(--vs-line-soft)]">
                 {filtered.length === 0 ? (
-                  <tr><td colSpan={9} className="text-center py-12 text-[13px] text-[var(--vs-muted-2)]">Tidak ada data ditemukan</td></tr>
+                  <tr><td colSpan={9} className="text-center py-12 text-[13px] text-[var(--vs-muted-2)]">{t('customer.noData')}</td></tr>
                 ) : filtered.map(c => (
                   <tr
                     key={c.id}
@@ -163,7 +171,7 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
                     </td>
                     <td className="px-4 py-3"><RiskBadge level={c.risk_level} /></td>
                     <td className="px-4 py-3 text-[13px] text-[var(--vs-muted)] tabular-nums">
-                      {c.avg_usage_hrs != null ? `${c.avg_usage_hrs} jam` : '—'}
+                      {c.avg_usage_hrs != null ? `${c.avg_usage_hrs}${lang === 'en' ? ' hrs' : ' jam'}` : '—'}
                     </td>
                     <td className="px-4 py-3 text-[13px] text-[var(--vs-muted)] tabular-nums">
                       {c.total_tickets ?? '—'}
@@ -171,7 +179,7 @@ export default function CustomerTable({ customers, loading, onCustomerOpen }) {
                     <td className="px-4 py-3 text-[13px] text-[var(--vs-muted)] tabular-nums">
                       {c.avg_nps_score != null ? c.avg_nps_score : '—'}
                     </td>
-                    <td className="px-4 py-3 text-[12px] text-[var(--vs-muted-2)] font-mono tabular-nums">{c.days_since_login}h lalu</td>
+                    <td className="px-4 py-3 text-[12px] text-[var(--vs-muted-2)] font-mono tabular-nums">{c.days_since_login}{lang === 'en' ? 'd ago' : 'h lalu'}</td>
                   </tr>
                 ))}
               </tbody>

@@ -11,9 +11,9 @@ import { supabase } from '@/lib/supabase';
 import { sendChat } from '@/lib/churnshield';
 
 // ── helpers ───────────────────────────────────────────────────────────
-function formatTime(iso) {
+function formatTime(iso, lang = 'id') {
   if (!iso) return '';
-  return new Date(iso).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString(lang === 'en' ? 'en-US' : 'id-ID', { hour: '2-digit', minute: '2-digit' });
 }
 
 // ── Bot text renderer (newline + **bold**) ────────────────────────────
@@ -438,7 +438,7 @@ export default function FloatingChat() {
       {/* ── FAB ── */}
       <button
         onClick={() => setIsOpen(v => !v)}
-        aria-label="Buka AI Asisten"
+        aria-label={lang === 'en' ? 'Open AI Assistant' : 'Buka AI Asisten'}
         className={`fixed bottom-6 right-6 z-[200] flex h-14 w-14 items-center justify-center rounded-2xl transition-all duration-200 hover:scale-105 active:scale-95 ${!isOpen ? 'vs-fab-pulse' : ''}`}
         style={{ background: '#2563EB', boxShadow: '0 8px 24px rgba(37,99,235,0.35)' }}
       >
@@ -559,7 +559,7 @@ export default function FloatingChat() {
                         </div>
 
                         <div className={`mt-1 flex items-center gap-1.5 text-[10px] ${isUser ? 'justify-end pr-1' : 'pl-1'}`}>
-                          <span className="text-slate-400">{formatTime(msg.ts)}</span>
+                          <span className="text-slate-400">{formatTime(msg.ts, lang)}</span>
                         </div>
 
                         {/* Bot actions */}

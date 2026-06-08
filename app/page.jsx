@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import {
   motion,
   useReducedMotion,
@@ -17,8 +17,14 @@ import {
   BarChart2,
   Activity,
   CheckCircle2,
+  Database,
+  Sparkles,
+  UserCheck,
+  CheckSquare,
+  LayoutDashboard,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 const G = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -78,6 +84,9 @@ const stgFast = { hidden: {}, visible: { transition: { staggerChildren: 0.05, de
 const stgTight = { hidden: {}, visible: { transition: { staggerChildren: 0.045 } } };
 
 const NAV = [
+  ['#home', 'Home'],
+  ['#cara-kerja', 'Workflow'],
+  ['#workspace', 'Workspace'],
   ['#fitur', 'Fitur'],
   ['#manfaat', 'Manfaat'],
 ];
@@ -188,9 +197,103 @@ function FeatureCard({ icon: Icon, title, desc, index, reduced }) {
 }
 
 export default function LandingPage() {
+  const { t, lang, toggleLang } = useLang();
   const router = useRouter();
   const [leaving, setLeaving] = useState(false);
+  const [activeRole, setActiveRole] = useState('admin');
+  const [activeSection, setActiveSection] = useState('');
   const reduceMotion = useReducedMotion() ?? false;
+
+  const navItems = [
+    ['#home', t('landing.nav.home')],
+    ['#cara-kerja', t('landing.nav.workflow')],
+    ['#workspace', t('landing.nav.workspace')],
+    ['#fitur', t('landing.nav.features')],
+    ['#manfaat', t('landing.nav.benefits')],
+  ];
+
+  const featureItems = [
+    {
+      icon: TrendingDown,
+      title: t('landing.features.item1.title'),
+      desc: t('landing.features.item1.desc'),
+    },
+    {
+      icon: AlertTriangle,
+      title: t('landing.features.item2.title'),
+      desc: t('landing.features.item2.desc'),
+    },
+    {
+      icon: Zap,
+      title: t('landing.features.item3.title'),
+      desc: t('landing.features.item3.desc'),
+    },
+    {
+      icon: Users,
+      title: t('landing.features.item4.title'),
+      desc: t('landing.features.item4.desc'),
+    },
+    {
+      icon: BarChart2,
+      title: t('landing.features.item5.title'),
+      desc: t('landing.features.item5.desc'),
+    },
+    {
+      icon: Activity,
+      title: t('landing.features.item6.title'),
+      desc: t('landing.features.item6.desc'),
+    },
+  ];
+
+  const benefitItems = [
+    { n: '01', title: t('landing.benefits.point1') },
+    { n: '02', title: t('landing.benefits.point2') },
+    { n: '03', title: t('landing.benefits.point3') },
+  ];
+
+  const heroWords = t('landing.hero.title').split(' ');
+
+  useEffect(() => {
+    const sections = ['home', 'cara-kerja', 'workspace', 'fitur', 'manfaat'];
+    
+    const observerOptions = {
+      root: null,
+      rootMargin: '-30% 0px -50% 0px',
+      threshold: 0.1,
+    };
+
+    const observerCallback = (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          setActiveSection(`#${entry.target.id}`);
+        }
+      });
+    };
+
+    const observer = new IntersectionObserver(observerCallback, observerOptions);
+
+    sections.forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    });
+
+    const handleScroll = () => {
+      if (window.scrollY < 120) {
+        setActiveSection('#home');
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+
+    // Set initial active state to #home if we are at the top on mount
+    if (window.scrollY < 120) {
+      setActiveSection('#home');
+    }
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
 
   /** Animasi `whileInView` ulang setiap kali elemen masuk layar; jika reduced motion → hanya sekali */
   const vpScroll = useMemo(
@@ -236,28 +339,61 @@ export default function LandingPage() {
             </motion.div>
 
             <nav className="hidden flex-1 items-center justify-center gap-0.5 md:flex">
-              {NAV.map(([href, label]) => (
-                <motion.a
-                  key={href}
-                  href={href}
-                  whileHover={reduceMotion ? { y: 0 } : { y: -2 }}
-                  whileTap={{ scale: 0.97 }}
-                  transition={springSnappy}
-                  className="rounded-lg px-3 py-2 text-[14px] font-medium text-slate-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
-                >
-                  {label}
-                </motion.a>
-              ))}
+              {navItems.map(([href, label]) => {
+                const isActive = activeSection === href;
+                return (
+                  <motion.a
+                    key={href}
+                    href={href}
+                    whileHover={reduceMotion ? { y: 0 } : { y: -2 }}
+                    whileTap={{ scale: 0.97 }}
+                    transition={springSnappy}
+                    className={cn(
+                      "rounded-lg px-3 py-2 text-[14px] font-semibold transition-all duration-200",
+                      isActive
+                        ? "bg-blue-50 text-blue-700"
+                        : "text-slate-600 hover:bg-blue-50 hover:text-blue-700"
+                    )}
+                  >
+                    {label}
+                  </motion.a>
+                );
+              })}
             </nav>
 
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-3">
               <nav className="flex items-center gap-0.5 md:hidden">
-                {NAV.map(([href, label]) => (
-                  <a key={href} href={href} className="rounded-md px-1.5 py-1.5 text-[11px] font-medium text-slate-600 sm:px-2 sm:text-xs">
-                    {label}
-                  </a>
-                ))}
+                {navItems.map(([href, label]) => {
+                  const isActive = activeSection === href;
+                  return (
+                    <a
+                      key={href}
+                      href={href}
+                      className={cn(
+                        "rounded-md px-1.5 py-1.5 text-[11px] font-semibold transition-all duration-200 sm:px-2 sm:text-xs",
+                        isActive
+                          ? "bg-blue-50 text-blue-700"
+                          : "text-slate-600"
+                      )}
+                    >
+                      {label}
+                    </a>
+                  );
+                })}
               </nav>
+              
+              {/* ── Language Switcher ── */}
+              <button
+                type="button"
+                onClick={toggleLang}
+                className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 text-[12px] font-semibold text-slate-700 transition-all focus:outline-none"
+                aria-label="Toggle Language"
+              >
+                <span className={lang === 'id' ? 'text-blue-600 font-bold' : 'text-slate-400 font-normal'}>ID</span>
+                <span className="text-slate-300">/</span>
+                <span className={lang === 'en' ? 'text-blue-600 font-bold' : 'text-slate-400 font-normal'}>EN</span>
+              </button>
+
               <motion.a
                 href="/login"
                 onClick={go('/login')}
@@ -270,7 +406,7 @@ export default function LandingPage() {
                 )}
                 style={{ backgroundColor: BRAND }}
               >
-                Mulai sekarang
+                {t('landing.nav.start')}
                 <motion.span animate={reduceMotion ? {} : { x: [0, 3, 0] }} transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}>
                   <ArrowUpRight className="h-3.5 w-3.5 opacity-90" />
                 </motion.span>
@@ -280,7 +416,7 @@ export default function LandingPage() {
         </motion.header>
 
         <main className="pb-4">
-          <section className="px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
+          <section id="home" className="px-4 pt-6 sm:px-6 lg:px-8 lg:pt-8">
             <div className="mx-auto max-w-6xl">
               <motion.div
                 initial={{ opacity: 0, y: 24 }}
@@ -316,13 +452,13 @@ export default function LandingPage() {
                           )}
                           <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
                         </span>
-                        Platform Customer Success & churn
+                        {t('landing.hero.badge')}
                       </motion.p>
                       <h1
                         className="max-w-[680px] text-[clamp(28px,4.5vw,48px)] font-extrabold leading-[1.12] tracking-[-0.03em] text-white drop-shadow-[0_2px_24px_rgba(0,0,0,0.45)]"
                         style={{ color: '#ffffff' }}
                       >
-                        {HERO_WORDS.map((w, i) => (
+                        {heroWords.map((w, i) => (
                           <motion.span
                             key={`${w}-${i}`}
                             initial={{ opacity: 0, y: 16 }}
@@ -342,7 +478,7 @@ export default function LandingPage() {
                         className="mt-4 max-w-[520px] text-[15px] leading-relaxed text-white/90"
                         style={{ color: 'rgba(255,255,255,0.92)' }}
                       >
-                        Skor risiko, prioritas otomatis, dan tugas untuk tim dalam satu tempat.
+                        {t('landing.hero.desc')}
                       </motion.p>
                       <motion.div
                         initial={{ opacity: 0, y: 12 }}
@@ -361,7 +497,7 @@ export default function LandingPage() {
                             leaving && 'pointer-events-none opacity-60',
                           )}
                         >
-                          Mulai sekarang <ArrowRight className="h-4 w-4" />
+                          {t('landing.hero.btnStart')} <ArrowRight className="h-4 w-4" />
                         </motion.a>
                         <motion.a
                           href="#fitur"
@@ -371,7 +507,7 @@ export default function LandingPage() {
                           className="inline-flex items-center gap-2 rounded-full border border-white/40 bg-white/10 px-6 py-3 text-[14px] font-semibold text-white backdrop-blur-sm"
                           style={{ color: '#ffffff' }}
                         >
-                          Lihat fitur
+                          {t('landing.hero.btnFeatures')}
                         </motion.a>
                       </motion.div>
                     </div>
@@ -385,9 +521,9 @@ export default function LandingPage() {
                   className="relative grid grid-cols-3 divide-x divide-slate-200 bg-white"
                 >
                   {[
-                    { v: '24/7', l: 'Pemantauan' },
-                    { v: '< 2s', l: 'Update skor' },
-                    { v: '100%', l: 'Berbasis data' },
+                    { v: '24/7', l: t('landing.hero.stat1') },
+                    { v: '< 2s', l: t('landing.hero.stat2') },
+                    { v: '100%', l: t('landing.hero.stat3') },
                   ].map((s) => (
                     <motion.div key={s.l} variants={fadeUpSm} className="px-3 py-5 text-center sm:py-6 md:px-6">
                       <motion.p
@@ -415,15 +551,14 @@ export default function LandingPage() {
                 variants={slideLeft}
                 className="text-[clamp(22px,2.5vw,32px)] font-bold leading-snug tracking-tight text-slate-900"
               >
-                Data retensi yang bisa dipercaya tim CS Anda.
+                {t('landing.about.title')}
               </motion.h2>
               <motion.div initial="hidden" whileInView="visible" viewport={vpScroll} variants={stg} className="space-y-5">
                 <motion.p variants={fadeUpSm} className="text-[15px] leading-relaxed" style={{ color: MUTED }}>
-                  Visions membantu tim Customer Success melihat siapa yang berisiko churn dan apa yang perlu dilakukan —
-                  tanpa spreadsheet panjang atau rapat ad hoc setiap minggu.
+                  {t('landing.about.desc')}
                 </motion.p>
                 <motion.ul variants={stgFast} className="space-y-3">
-                  {['Sinyal dari pemakaian produk & dukungan', 'Skor dan prioritas yang konsisten', 'Peran admin & staf dalam satu alur'].map((t) => (
+                  {[t('landing.about.point1'), t('landing.about.point2'), t('landing.about.point3')].map((t) => (
                     <motion.li key={t} variants={fadeUpSm} className="flex items-start gap-3 text-[14px] text-slate-700">
                       <motion.span
                         initial={{ scale: 0 }}
@@ -442,6 +577,332 @@ export default function LandingPage() {
             </div>
           </section>
 
+          {/* ── Workflow / Cara Kerja Section ── */}
+          <section id="cara-kerja" className="border-t border-slate-100 py-16 sm:py-20 bg-gradient-to-b from-white to-slate-50">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={vpScroll}
+                variants={stg}
+                className="mb-12 max-w-2xl text-center mx-auto lg:mb-16"
+              >
+                <motion.span variants={fadeUpSm} className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 mb-3">
+                  {t('landing.workflow.badge')}
+                </motion.span>
+                <motion.h2 variants={fadeUp} className="text-[clamp(24px,3vw,36px)] font-bold leading-tight tracking-tight text-slate-900">
+                  {t('landing.workflow.title')}
+                </motion.h2>
+                <motion.p variants={fadeUpSm} className="mt-3 text-[15px] leading-relaxed text-slate-500">
+                  {t('landing.workflow.desc')}
+                </motion.p>
+              </motion.div>
+
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={vpScroll}
+                variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.1, delayChildren: 0.1 } } }}
+                className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4 relative"
+              >
+                {/* Connecting Line for Large Screens */}
+                <div className="hidden lg:block absolute top-1/2 left-4 right-4 h-0.5 bg-slate-200/60 -translate-y-12 z-0" />
+                
+                {[
+                  {
+                    step: '01',
+                    icon: Database,
+                    title: t('landing.workflow.step1.title'),
+                    desc: t('landing.workflow.step1.desc'),
+                    bg: 'bg-blue-50 text-blue-600 border-blue-100'
+                  },
+                  {
+                    step: '02',
+                    icon: Sparkles,
+                    title: t('landing.workflow.step2.title'),
+                    desc: t('landing.workflow.step2.desc'),
+                    bg: 'bg-indigo-50 text-indigo-600 border-indigo-100'
+                  },
+                  {
+                    step: '03',
+                    icon: UserCheck,
+                    title: t('landing.workflow.step3.title'),
+                    desc: t('landing.workflow.step3.desc'),
+                    bg: 'bg-violet-50 text-violet-600 border-violet-100'
+                  },
+                  {
+                    step: '04',
+                    icon: CheckSquare,
+                    title: t('landing.workflow.step4.title'),
+                    desc: t('landing.workflow.step4.desc'),
+                    bg: 'bg-emerald-50 text-emerald-600 border-emerald-100'
+                  }
+                ].map((w, idx) => (
+                  <motion.div
+                    key={w.title}
+                    variants={scaleIn}
+                    whileHover={
+                      reduceMotion
+                        ? {}
+                        : {
+                            y: -8,
+                            boxShadow: '0 20px 40px -12px rgba(15, 23, 42, 0.12)',
+                            transition: springSoft,
+                          }
+                    }
+                    className="relative z-10 flex flex-col items-center text-center bg-white rounded-3xl border border-slate-100 p-6 shadow-sm group"
+                  >
+                    {/* Badge Step */}
+                    <div className="absolute top-4 right-6 font-black text-5xl text-slate-100 tracking-tighter select-none transition-colors group-hover:text-blue-500/10">
+                      {w.step}
+                    </div>
+
+                    {/* Icon Container with Gradient Border Hover */}
+                    <div className={cn("mb-5 flex h-14 w-14 items-center justify-center rounded-2xl border text-xl shadow-sm transition-transform duration-300 group-hover:scale-110", w.bg)}>
+                      <w.icon className="h-6 w-6" strokeWidth={2} />
+                    </div>
+
+                    <h3 className="mb-2 text-[16px] font-extrabold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      {w.title}
+                    </h3>
+                    
+                    <p className="text-[13px] leading-relaxed text-slate-500">
+                      {w.desc}
+                    </p>
+                  </motion.div>
+                ))}
+              </motion.div>
+            </div>
+          </section>
+
+          {/* ── Workspace Preview Section ── */}
+          <section id="workspace" className="border-t border-slate-100 py-16 sm:py-20 bg-white">
+            <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+              <motion.div
+                initial="hidden"
+                whileInView="visible"
+                viewport={vpScroll}
+                variants={stg}
+                className="mb-12 max-w-3xl text-center mx-auto lg:mb-16"
+              >
+                <motion.span variants={fadeUpSm} className="inline-block px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 border border-blue-100 mb-3">
+                  {t('landing.workspace.badge')}
+                </motion.span>
+                <motion.h2 variants={fadeUp} className="text-[clamp(24px,3vw,36px)] font-bold leading-tight tracking-tight text-slate-900">
+                  {t('landing.workspace.title')}
+                </motion.h2>
+                <motion.p variants={fadeUpSm} className="mt-3 text-[15px] leading-relaxed text-slate-500">
+                  {t('landing.workspace.desc')}
+                </motion.p>
+              </motion.div>
+
+              {/* Tab Switcher */}
+              <div className="flex justify-center mb-10">
+                <div className="inline-flex rounded-2xl bg-slate-100 p-1.5 border border-slate-200/60">
+                  <button
+                    onClick={() => setActiveRole('admin')}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200",
+                      activeRole === 'admin' 
+                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                        : "text-slate-500 hover:text-slate-800"
+                    )}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    {t('landing.workspace.adminTab')}
+                  </button>
+                  <button
+                    onClick={() => setActiveRole('staff')}
+                    className={cn(
+                      "flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200",
+                      activeRole === 'staff' 
+                        ? "bg-white text-blue-600 shadow-sm border border-slate-200/40" 
+                        : "text-slate-500 hover:text-slate-800"
+                    )}
+                  >
+                    <Users className="h-4 w-4" />
+                    {t('landing.workspace.staffTab')}
+                  </button>
+                </div>
+              </div>
+
+              {/* Tab Content */}
+              <div className="grid gap-10 lg:grid-cols-12 lg:items-center">
+                {/* Text Description - 5 Cols */}
+                <div className="lg:col-span-5 space-y-6">
+                  {activeRole === 'admin' ? (
+                    <motion.div
+                      key="admin-desc"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="space-y-5"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100 text-blue-600">
+                        <LayoutDashboard className="h-5 w-5" />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-900">{t('landing.workspace.adminTitle')}</h3>
+                      <p className="text-[14px] leading-relaxed text-slate-500">
+                        {t('landing.workspace.adminDesc')}
+                      </p>
+                      <ul className="space-y-3">
+                        {[
+                          t('landing.workspace.adminPoint1'),
+                          t('landing.workspace.adminPoint2'),
+                          t('landing.workspace.adminPoint3'),
+                          t('landing.workspace.adminPoint4')
+                        ].map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-[13px] text-slate-600">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 font-bold text-[10px] mt-0.5">
+                              {i+1}
+                            </span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  ) : (
+                    <motion.div
+                      key="staff-desc"
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ duration: 0.4 }}
+                      className="space-y-5"
+                    >
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 border border-blue-100 text-blue-600">
+                        <Users className="h-5 w-5" />
+                      </div>
+                      <h3 className="text-xl font-bold text-slate-900">{t('landing.workspace.staffTitle')}</h3>
+                      <p className="text-[14px] leading-relaxed text-slate-500">
+                        {t('landing.workspace.staffDesc')}
+                      </p>
+                      <ul className="space-y-3">
+                        {[
+                          t('landing.workspace.staffPoint1'),
+                          t('landing.workspace.staffPoint2'),
+                          t('landing.workspace.staffPoint3'),
+                          t('landing.workspace.staffPoint4')
+                        ].map((item, i) => (
+                          <li key={i} className="flex items-start gap-2.5 text-[13px] text-slate-600">
+                            <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 font-bold text-[10px] mt-0.5">
+                              {i+1}
+                            </span>
+                            {item}
+                          </li>
+                        ))}
+                      </ul>
+                    </motion.div>
+                  )}
+                </div>
+
+                {/* Dashboard Mockup Visual - 7 Cols */}
+                <div className="lg:col-span-7">
+                  <motion.div
+                    key={activeRole}
+                    initial={{ opacity: 0, scale: 0.97, y: 15 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    transition={{ duration: 0.45, ease: E }}
+                    className="relative overflow-hidden rounded-2xl border border-slate-200 bg-slate-900 p-1.5 shadow-xl shadow-slate-200/30"
+                  >
+                    {/* Title Bar Mockup */}
+                    <div className="flex items-center gap-2 px-4 py-3 border-b border-slate-800 bg-slate-900/50">
+                      <div className="flex gap-1.5">
+                        <span className="h-3 w-3 rounded-full bg-rose-500/80" />
+                        <span className="h-3 w-3 rounded-full bg-amber-500/80" />
+                        <span className="h-3 w-3 rounded-full bg-emerald-500/80" />
+                      </div>
+                      <div className="mx-auto rounded-lg bg-slate-800 px-12 py-1 text-[10px] font-medium text-slate-400 select-none">
+                        {activeRole === 'admin' ? 'visions.io/dashboard/admin' : 'visions.io/dashboard/staff'}
+                      </div>
+                    </div>
+
+                    {/* Dashboard Workspace Mockup Area */}
+                    <div className="bg-slate-950 p-5 min-h-[300px] text-white">
+                      {activeRole === 'admin' ? (
+                        /* Admin Dashboard Mock */
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between border-b border-slate-900 pb-3">
+                            <span className="text-xs font-bold text-slate-400">{t('landing.workspace.mock.adminTitle')}</span>
+                            <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[9px] font-bold text-emerald-400 uppercase border border-emerald-500/20">{t('landing.workspace.mock.active')}</span>
+                          </div>
+                          
+                          {/* Stats Row */}
+                          <div className="grid grid-cols-3 gap-3">
+                            <div className="rounded-xl border border-slate-900 bg-slate-900/40 p-3 text-left">
+                              <p className="text-[10px] text-slate-400">{t('landing.workspace.mock.totalCust')}</p>
+                              <p className="text-lg font-black text-white mt-1">248 <span className="text-[9px] font-medium text-slate-500">{t('landing.workspace.mock.clients')}</span></p>
+                            </div>
+                            <div className="rounded-xl border border-slate-900 bg-slate-900/40 p-3 text-left">
+                              <p className="text-[10px] text-slate-400">{t('landing.workspace.mock.highRisk')}</p>
+                              <p className="text-lg font-black text-rose-400 mt-1">42 <span className="text-[9px] font-medium text-rose-500">🚨 Churn</span></p>
+                            </div>
+                            <div className="rounded-xl border border-slate-900 bg-slate-900/40 p-3 text-left">
+                              <p className="text-[10px] text-slate-400">{t('landing.workspace.mock.accuracy')}</p>
+                              <p className="text-lg font-black text-blue-400 mt-1">89.4% <span className="text-[9px] font-medium text-blue-500">{t('landing.workspace.mock.model')}</span></p>
+                            </div>
+                          </div>
+
+                          {/* Workload List */}
+                          <div className="rounded-xl border border-slate-900 bg-slate-900/20 p-3.5 space-y-3 text-left">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{t('landing.workspace.mock.workloadTitle')}</p>
+                            <div className="space-y-2">
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="font-semibold text-slate-300">Budi Santoso</span>
+                                <span className="px-2 py-0.5 rounded-md bg-rose-500/10 text-rose-400 text-[9px] font-bold">{t('landing.workspace.mock.overloaded')}</span>
+                              </div>
+                              <div className="flex justify-between items-center text-xs">
+                                <span className="font-semibold text-slate-300">Dewi Lestari</span>
+                                <span className="px-2 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 text-[9px] font-bold">{t('landing.workspace.mock.safe')}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        /* Staff Dashboard Mock */
+                        <div className="space-y-4">
+                          <div className="flex items-center justify-between border-b border-slate-900 pb-3">
+                            <span className="text-xs font-bold text-slate-400">{t('landing.workspace.mock.staffTitle')}</span>
+                            <span className="rounded bg-rose-500/20 px-2 py-0.5 text-[9px] font-bold text-rose-400">C-0001</span>
+                          </div>
+
+                          {/* Profile Card Mini */}
+                          <div className="flex justify-between items-center rounded-xl border border-slate-900 bg-slate-900/40 p-3.5 text-left">
+                            <div>
+                              <h4 className="text-xs font-bold text-white">LapisAI Corp</h4>
+                              <p className="text-[9px] text-slate-500 mt-0.5">Plan: Enterprise SaaS</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-[9px] text-slate-400">{t('landing.workspace.mock.riskLabel')}</p>
+                              <p className="text-sm font-black text-rose-400">{t('landing.workspace.mock.riskLevel')}</p>
+                            </div>
+                          </div>
+
+                          {/* AI Recommendation Box */}
+                          <div className="rounded-xl border border-blue-900/40 bg-blue-950/20 p-3.5 space-y-2 text-left">
+                            <div className="flex items-center gap-1.5">
+                              <Sparkles className="h-3 w-3 text-blue-400" />
+                              <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">{t('landing.workspace.mock.recommendationTitle')}</span>
+                            </div>
+                            <ul className="space-y-1.5 text-[11px] text-slate-300">
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-blue-500 mt-0.5">•</span>
+                                {t('landing.workspace.mock.rec1')}
+                              </li>
+                              <li className="flex items-start gap-1.5">
+                                <span className="text-blue-500 mt-0.5">•</span>
+                                {t('landing.workspace.mock.rec2')}
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
+          </section>
+
           <section id="fitur" className="border-t border-slate-100 py-16 sm:py-20" style={{ backgroundColor: COOL_BG }}>
             <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
               <motion.div
@@ -452,10 +913,10 @@ export default function LandingPage() {
                 className="mb-12 max-w-2xl lg:mb-14"
               >
                 <motion.h2 variants={fadeUp} className="text-[clamp(24px,3vw,36px)] font-bold leading-tight tracking-tight text-slate-900">
-                  Fitur untuk tim yang fokus ke retensi
+                  {t('landing.features.title')}
                 </motion.h2>
                 <motion.p variants={fadeUpSm} className="mt-3 text-[15px] leading-relaxed" style={{ color: MUTED }}>
-                  Dari skor risiko sampai laporan — dirancang untuk operasional harian CS.
+                  {t('landing.features.desc')}
                 </motion.p>
               </motion.div>
 
@@ -466,7 +927,7 @@ export default function LandingPage() {
                 variants={{ hidden: {}, visible: { transition: { staggerChildren: 0.06, delayChildren: 0.05 } } }}
                 className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-x-10 lg:gap-y-10"
               >
-                {FEATURES.map(({ icon, title, desc }, i) => (
+                {featureItems.map(({ icon, title, desc }, i) => (
                   <FeatureCard key={title} icon={icon} title={title} desc={desc} index={i} reduced={reduceMotion} />
                 ))}
               </motion.div>
@@ -478,16 +939,16 @@ export default function LandingPage() {
               <div className="grid gap-10 lg:grid-cols-2 lg:items-stretch lg:gap-12">
                 <motion.div initial="hidden" whileInView="visible" viewport={vpScroll} variants={stg} className="flex flex-col">
                   <motion.h2 variants={fadeUp} className="mb-8 text-[clamp(24px,3vw,34px)] font-bold leading-tight text-slate-900">
-                    Manfaat nyata untuk operasi CS
+                    {t('landing.benefits.title')}
                   </motion.h2>
                   <ul className="flex-1 space-y-0">
-                    {MANFAAT_ITEMS.map((s, i) => (
+                    {benefitItems.map((s, i) => (
                       <motion.li
                         key={s.n}
                         variants={fadeUpSm}
                         whileHover={reduceMotion ? {} : { x: 4 }}
                         transition={springSoft}
-                        className={cn('flex gap-4 border-slate-100 py-6', i < MANFAAT_ITEMS.length - 1 && 'border-b')}
+                        className={cn('flex gap-4 border-slate-100 py-6', i < benefitItems.length - 1 && 'border-b')}
                       >
                         <span className="w-8 shrink-0 pt-0.5 text-[13px] font-bold tabular-nums text-slate-400">{s.n}</span>
                         <div className="min-w-0">
@@ -536,9 +997,9 @@ export default function LandingPage() {
                 )}
                 <div className="relative flex flex-col items-start justify-between gap-6 sm:flex-row sm:items-center">
                   <motion.div variants={fadeUpSm}>
-                    <h3 className="text-lg font-bold text-slate-900 sm:text-xl">Siap pakai bersama tim?</h3>
+                    <h3 className="text-lg font-bold text-slate-900 sm:text-xl">{t('landing.cta.title')}</h3>
                     <p className="mt-1 max-w-xl text-[14px] leading-relaxed" style={{ color: MUTED }}>
-                      Minta akses dari admin organisasi Anda, lalu masuk ke dashboard.
+                      {t('landing.cta.desc')}
                     </p>
                   </motion.div>
                   <motion.a
@@ -554,7 +1015,7 @@ export default function LandingPage() {
                     )}
                     style={{ backgroundColor: BRAND }}
                   >
-                    Mulai sekarang <ArrowRight className="h-4 w-4" />
+                    {t('landing.cta.btn')} <ArrowRight className="h-4 w-4" />
                   </motion.a>
                 </div>
               </motion.div>
@@ -577,7 +1038,7 @@ export default function LandingPage() {
               <span className="text-[15px] font-bold text-slate-900">Visions</span>
             </motion.div>
             <div className="flex flex-wrap justify-center gap-6 text-[13px] font-medium text-slate-500">
-              {NAV.map(([href, label]) => (
+              {navItems.map(([href, label]) => (
                 <motion.a key={href} href={href} whileHover={{ y: -1 }} className="transition-colors hover:text-blue-600">
                   {label}
                 </motion.a>

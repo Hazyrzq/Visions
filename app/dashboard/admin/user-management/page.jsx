@@ -12,6 +12,7 @@ import { mockProfiles } from '@/lib/mockData';
 import { useToast, ToastContainer } from '@/components/ui/Toast';
 import { supabase } from '@/lib/supabase';
 import DashboardShell from '@/components/dashboard/DashboardShell';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 /* ── Custom Select ── */
 const ModernSelect = ({ value, onChange, options, disabled }) => {
@@ -58,6 +59,7 @@ const ModernSelect = ({ value, onChange, options, disabled }) => {
 
 /* ── Right Drawer ── */
 function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, onToggleActive }) {
+  const { t, lang } = useLang();
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
   useEffect(() => {
@@ -101,7 +103,7 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
         {/* header strip */}
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-5 py-4">
           <p className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-            {isEdit ? 'Detail Pengguna' : 'Tambah Pengguna Baru'}
+            {isEdit ? t('userManagement.editUser') : t('userManagement.addNewUser')}
           </p>
           <button type="button" onClick={onClose}
             className="flex h-8 w-8 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700">
@@ -125,12 +127,12 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
                       {user.role === 'admin' ? <><ShieldCheck className="mr-1 inline h-3 w-3" />Admin</> : <><UserCog className="mr-1 inline h-3 w-3" />Staff</>}
                     </span>
                     <span className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${user.is_active ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
-                      {user.is_active ? 'Aktif' : 'Nonaktif'}
+                      {user.is_active ? t('userManagement.statusActive') : t('userManagement.statusInactive')}
                     </span>
                   </div>
                 </div>
                 <button type="button" onClick={() => onToggleActive(user)}
-                  title={user.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+                  title={user.is_active ? t('userManagement.deactivated') : t('userManagement.activated')}
                   className={`shrink-0 rounded-xl p-2 transition-colors ${user.is_active ? 'text-emerald-500 hover:bg-red-50 hover:text-red-500' : 'text-slate-400 hover:bg-emerald-50 hover:text-emerald-600'}`}>
                   {user.is_active ? <ToggleRight className="h-6 w-6" /> : <ToggleLeft className="h-6 w-6" />}
                 </button>
@@ -139,13 +141,13 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
               {/* stats row */}
               <div className="mt-4 grid grid-cols-3 gap-3">
                 {[
-                  { icon: Mail, label: 'Email', value: user.email ?? '—', mono: true },
-                  { icon: Users, label: 'Ditugaskan', value: user.role === 'admin' ? '—' : (user.assigned_count ?? 0) },
+                  { icon: Mail, label: t('userManagement.email'), value: user.email ?? '—', mono: true },
+                  { icon: Users, label: t('userManagement.assignedCount'), value: user.role === 'admin' ? '—' : (user.assigned_count ?? 0) },
                   {
-                    icon: CalendarDays, label: 'Terakhir Login',
+                    icon: CalendarDays, label: t('userManagement.lastLogin'),
                     value: user.last_login
-                      ? new Date(user.last_login).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
-                      : 'Belum',
+                      ? new Date(user.last_login).toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'short' })
+                      : t('userManagement.never'),
                   },
                 ].map(({ icon: Icon, label, value, mono }) => (
                   <div key={label} className="rounded-xl border border-slate-100 bg-slate-50 p-3">
@@ -162,7 +164,7 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
                 <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50 p-3">
                   <div className="flex items-center justify-between mb-1.5">
                     <p className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
-                      <Gauge className="h-3 w-3" /> Kapasitas
+                      <Gauge className="h-3 w-3" /> {t('userManagement.capacity')}
                     </p>
                     <span className="text-[11px] font-bold text-slate-600">
                       {user.assigned_count ?? 0} / {user.max_load ?? 10}
@@ -185,28 +187,28 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
           {/* form */}
           <div className="px-5 py-5 space-y-4">
             <p className="text-[12px] font-bold uppercase tracking-wider text-slate-400">
-              {isEdit ? 'Edit Profil' : 'Informasi Pengguna'}
+              {isEdit ? t('userManagement.editProfile') : t('userManagement.userInfo')}
             </p>
 
             <div className="space-y-1.5">
-              <label className="text-[12px] font-semibold text-slate-500">Nama Lengkap</label>
+              <label className="text-[12px] font-semibold text-slate-500">{t('userManagement.fullName')}</label>
               <input type="text" value={form.full_name}
                 onChange={e => setForm(p => ({ ...p, full_name: e.target.value }))}
                 placeholder="John Doe" className="vs-input px-3 py-2.5" />
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[12px] font-semibold text-slate-500">Email</label>
+              <label className="text-[12px] font-semibold text-slate-500">{t('userManagement.email')}</label>
               <input type="email" value={form.email}
                 onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                 placeholder="john@perusahaan.com"
                 disabled={isEdit}
                 className={`vs-input px-3 py-2.5 ${isEdit ? 'opacity-50 cursor-not-allowed' : ''}`} />
-              {isEdit && <p className="text-[11px] text-slate-400">Email tidak dapat diubah.</p>}
+              {isEdit && <p className="text-[11px] text-slate-400">{t('userManagement.emailCantChange')}</p>}
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[12px] font-semibold text-slate-500">Role</label>
+              <label className="text-[12px] font-semibold text-slate-500">{t('userManagement.role')}</label>
               <ModernSelect
                 value={form.role}
                 onChange={val => setForm(p => ({ ...p, role: val }))}
@@ -225,8 +227,9 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
                   className="overflow-hidden"
                 >
                   <div className="space-y-1.5">
+                  <div className="space-y-1.5">
                     <label className="flex items-center gap-1.5 text-[12px] font-semibold text-slate-500">
-                      <Gauge className="h-3.5 w-3.5" /> Kapasitas Maks Pelanggan
+                      <Gauge className="h-3.5 w-3.5" /> {t('userManagement.maxLoad')}
                     </label>
                     <div className="flex items-center gap-3">
                       <input
@@ -255,8 +258,9 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
                       </div>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Jumlah maksimum pelanggan yang bisa di-assign ke staff ini. Default: 10.
+                      {t('userManagement.maxLoadDesc')}
                     </p>
+                  </div>
                   </div>
                 </motion.div>
               )}
@@ -264,10 +268,10 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
 
             {!isEdit && (
               <div className="space-y-1.5">
-                <label className="text-[12px] font-semibold text-slate-500">Password Awal</label>
+                <label className="text-[12px] font-semibold text-slate-500">{t('userManagement.initPassword')}</label>
                 <input type="password" value={form.password}
                   onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                  placeholder="Minimal 6 karakter" className="vs-input px-3 py-2.5" />
+                  placeholder={t('userManagement.initPasswordPlaceholder')} className="vs-input px-3 py-2.5" />
               </div>
             )}
           </div>
@@ -277,14 +281,14 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
         <div className="shrink-0 border-t border-slate-100 bg-white px-5 py-4 flex gap-3">
           <button type="button" onClick={onClose}
             className="flex-1 rounded-xl border border-slate-200 py-2.5 text-[13px] font-semibold text-slate-600 transition hover:bg-slate-50">
-            Batal
+            {t('userManagement.cancel')}
           </button>
           <button type="button" onClick={onSave} disabled={saving}
             className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 py-2.5 text-[13px] font-semibold text-white transition hover:bg-blue-700 disabled:opacity-60">
             {saving
               ? <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
               : <Save className="h-4 w-4" />}
-            {saving ? 'Menyimpan…' : isEdit ? 'Simpan Perubahan' : 'Tambah Pengguna'}
+            {saving ? t('userManagement.saving') : isEdit ? t('userManagement.saveChanges') : t('userManagement.addUser')}
           </button>
         </div>
       </motion.aside>
@@ -295,6 +299,7 @@ function UserDrawer({ open, mode, user, form, setForm, saving, onSave, onClose, 
 
 /* ── Main Page ── */
 export default function UserManagementPage() {
+  const { t, lang } = useLang();
   const { toasts, toast, remove } = useToast();
   const [profiles, setProfiles] = useState([]);
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -346,10 +351,10 @@ export default function UserManagementPage() {
   const closeDrawer = () => setDrawerOpen(false);
 
   const handleSave = async () => {
-    if (!form.full_name || !form.email) { toast('Nama dan email wajib diisi', 'warning'); return; }
+    if (!form.full_name || !form.email) { toast(t('userManagement.requiredNameEmail'), 'warning'); return; }
     setSaving(true);
     if (drawerMode === 'add') {
-      if (!form.password || form.password.length < 6) { toast('Password minimal 6 karakter', 'warning'); setSaving(false); return; }
+      if (!form.password || form.password.length < 6) { toast(t('userManagement.requiredPassword'), 'warning'); setSaving(false); return; }
       try {
         const res = await fetch('/api/create-user', {
           method: 'POST',
@@ -364,10 +369,10 @@ export default function UserManagementPage() {
         });
         const result = await res.json();
         if (!result.success) throw new Error(result.error);
-        toast('Pengguna baru berhasil ditambahkan!', 'success');
+        toast(t('userManagement.addSuccess'), 'success');
         await loadProfiles();
         closeDrawer();
-      } catch (err) { toast(err.message || 'Gagal menambahkan pengguna', 'error'); }
+      } catch (err) { toast(err.message || t('userManagement.addError'), 'error'); }
     } else {
       const updatePayload = {
         full_name: form.full_name,
@@ -401,10 +406,10 @@ export default function UserManagementPage() {
         }
 
         setProfiles(prev => prev.map(p => p.id === selectedUser.id ? { ...p, ...updatePayload } : p));
-        toast('Pengguna berhasil diperbarui', 'success');
+        toast(t('userManagement.updateSuccess'), 'success');
         closeDrawer(); // No.4 — tutup drawer setelah berhasil
       } catch (err) {
-        toast(err.message || 'Gagal memperbarui pengguna', 'error');
+        toast(err.message || t('userManagement.updateError'), 'error');
       }
     }
     setSaving(false);
@@ -418,7 +423,7 @@ export default function UserManagementPage() {
       const assigned = u.assigned_count ?? 0;
       if (assigned > 0) {
         const confirm = window.confirm(
-          `${u.full_name} memiliki ${assigned} pelanggan yang ter-assign.\n\nMendeactivate akan otomatis unassign mereka semua.\n\nLanjutkan?`
+          t('userManagement.confirmDeactivate', { name: u.full_name, count: assigned })
         );
         if (!confirm) return;
       }
@@ -426,7 +431,7 @@ export default function UserManagementPage() {
 
     try {
       const { error } = await supabase.from('profiles').update({ is_active: newStatus }).eq('id', u.id);
-      if (error) { toast('Gagal mengubah status', 'error'); return; }
+      if (error) { toast(t('userManagement.statusError'), 'error'); return; }
 
       // Jika deactivating staff, call deactivate-staff API untuk unassign customers
       if (!newStatus && u.role === 'staff') {
@@ -449,20 +454,20 @@ export default function UserManagementPage() {
 
       setProfiles(prev => prev.map(p => p.id === u.id ? { ...p, is_active: newStatus } : p));
       setSelectedUser(prev => prev?.id === u.id ? { ...prev, is_active: newStatus } : prev);
-      toast(`${u.full_name} ${newStatus ? 'diaktifkan' : 'dinonaktifkan'}`, 'success');
+      toast(`${u.full_name} ${newStatus ? t('userManagement.activated') : t('userManagement.deactivated')}`, 'success');
     } catch (err) {
-      toast(err.message || 'Gagal mengubah status', 'error');
+      toast(err.message || t('userManagement.statusError'), 'error');
     }
   };
 
   return (
     <DashboardShell
-      title="Manajemen Pengguna"
-      description="Kelola hak akses admin dan staf di platform secara terpusat."
+      title={t('userManagement.title')}
+      description={t('userManagement.subtitle')}
       icon={Shield}
       actions={(
         <button type="button" className="vs-btn vs-btn--primary" onClick={openAdd}>
-          <UserPlus className="h-4 w-4" /> Tambah Pengguna
+          <UserPlus className="h-4 w-4" /> {t('userManagement.addUser')}
         </button>
       )}
     >
@@ -471,7 +476,7 @@ export default function UserManagementPage() {
           <table className="w-full text-left">
             <thead>
               <tr className="bg-[var(--vs-bg)] border-b border-[var(--vs-line)]">
-                {['Nama', 'Email', 'Role', 'Ditugaskan', 'Kapasitas', 'Terakhir Login', 'Status'].map(h => (
+                {[t('userManagement.name'), 'Email', 'Role', t('userManagement.assignedCount'), t('userManagement.capacity'), t('userManagement.lastLogin'), t('userManagement.status')].map(h => (
                   <th key={h} className="px-5 py-3.5 text-[11px] font-semibold text-[var(--vs-muted-2)] uppercase tracking-wider whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -518,12 +523,12 @@ export default function UserManagementPage() {
                       )}
                     </td>
                     <td className="px-5 py-3.5 text-[12px] text-[var(--vs-muted)] font-mono">
-                      {u.last_login ? new Date(u.last_login).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : 'Belum Pernah'}
+                      {u.last_login ? new Date(u.last_login).toLocaleDateString(lang === 'en' ? 'en-US' : 'id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : t('userManagement.never')}
                     </td>
                     <td className="px-5 py-3.5">
                       <span className={`vs-tag ${u.is_active ? 'vs-tag--low' : ''}`}
                         style={!u.is_active ? { background: 'var(--vs-bg-2)', color: 'var(--vs-muted-3)', borderColor: 'var(--vs-line-soft)' } : {}}>
-                        {u.is_active ? 'Aktif' : 'Nonaktif'}
+                        {u.is_active ? t('userManagement.statusActive') : t('userManagement.statusInactive')}
                       </span>
                     </td>
                   </tr>

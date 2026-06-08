@@ -8,11 +8,13 @@ import { useAuth } from '@/lib/hooks/useAuth';
 import { getDashboardBreadcrumbs } from '@/lib/dashboardBreadcrumbs';
 import ProfileHoverCard from '@/components/profile/ProfileHoverCard';
 import { getNotifikasi } from '@/lib/churnshield';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 export default function Topbar({ onMenuClick }) {
   const pathname = usePathname();
   const { profile } = useAuth();
-  const { crumbs } = getDashboardBreadcrumbs(pathname);
+  const { lang, toggleLang } = useLang();
+  const { crumbs } = getDashboardBreadcrumbs(pathname, lang);
   const initials = profile?.full_name?.split(' ').slice(0, 2).map(n => n[0]).join('').toUpperCase() ?? '?';
 
   const [unread, setUnread] = useState(0);
@@ -72,6 +74,18 @@ export default function Topbar({ onMenuClick }) {
         </nav>
 
         <div className="ml-auto flex items-center gap-2">
+
+          {/* ── Language Switcher ── */}
+          <button
+            type="button"
+            onClick={toggleLang}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50/50 hover:bg-slate-100 hover:border-slate-300 text-[12px] font-semibold text-slate-700 transition-all focus:outline-none"
+            aria-label="Toggle Language"
+          >
+            <span className={lang === 'id' ? 'text-[var(--vs-brand)] font-bold' : 'text-slate-400 font-normal'}>ID</span>
+            <span className="text-slate-300">/</span>
+            <span className={lang === 'en' ? 'text-[var(--vs-brand)] font-bold' : 'text-slate-400 font-normal'}>EN</span>
+          </button>
 
           {/* ── Notifikasi ── */}
           <Link

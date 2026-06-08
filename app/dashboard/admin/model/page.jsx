@@ -1,13 +1,11 @@
 'use client';
 
-import { useLang } from '@/lib/i18n/LanguageContext';
 import { useState, useEffect } from 'react';
 import { Cpu, CheckCircle, Clock, BarChart2, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { supabase } from '@/lib/supabase';
+import { useLang } from '@/lib/i18n/LanguageContext';
 import DashboardShell from '@/components/dashboard/DashboardShell';
-
-const { t, lang } = useLang();
 
 const METRICS = [
   { key: 'akurasi',         label: 'Akurasi',   color: 'bg-blue-500',    track: 'bg-blue-100'    },
@@ -18,6 +16,7 @@ const METRICS = [
 ];
 
 export default function AdminModelPage() {
+  const { t, lang } = useLang();
   const [modelHistory, setModelHistory] = useState([]);
   const [selectedId, setSelectedId]     = useState(null);
   const [features, setFeatures]         = useState([]);
@@ -51,8 +50,8 @@ export default function AdminModelPage() {
 
   return (
     <DashboardShell
-      title="Performa Model ML"
-      description="Detail metrik evaluasi, perbandingan model, dan feature importance."
+      title={t('model.title') ?? 'Performa Model ML'}
+      description={t('model.subtitle') ?? 'Detail metrik evaluasi, perbandingan model, dan feature importance.'}
       icon={Cpu}
     >
       {loadingPage ? (
@@ -64,8 +63,10 @@ export default function AdminModelPage() {
           <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100">
             <Cpu className="h-7 w-7 text-slate-400" />
           </div>
-          <p className="text-[14px] font-semibold text-slate-700">Belum ada model tersimpan</p>
-          <p className="mt-1 text-[12px] text-slate-400">Upload dataset dan proses di halaman Data & Model.</p>
+          <p className="text-[14px] font-semibold text-slate-700">{t('model.noModel') ?? 'Belum ada model tersimpan'}</p>
+          <p className="mt-1 text-[12px] text-slate-400">
+            {lang === 'en' ? 'Upload datasets and process them on the Data & Model page.' : 'Upload dataset dan proses di halaman Data & Model.'}
+          </p>
         </div>
       ) : (
         <div className="space-y-5">
@@ -77,7 +78,7 @@ export default function AdminModelPage() {
                 <Cpu className="h-4 w-4 text-blue-600" />
               </div>
               <div className="text-2xl font-bold text-slate-900">{modelHistory.length}</div>
-              <div className="text-[12px] font-medium text-slate-400 mt-1">Total Model</div>
+              <div className="text-[12px] font-medium text-slate-400 mt-1">{t('model.totalModels') ?? 'Total Model'}</div>
             </div>
             <div className="vs-card p-5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 mb-3">
@@ -86,7 +87,7 @@ export default function AdminModelPage() {
               <div className="text-2xl font-bold text-emerald-600">
                 {activeModel ? activeModel.algoritma.split(' ')[0] : '—'}
               </div>
-              <div className="text-[12px] font-medium text-slate-400 mt-1">Model Aktif</div>
+              <div className="text-[12px] font-medium text-slate-400 mt-1">{t('model.activeModel') ?? 'Model Aktif'}</div>
             </div>
             <div className="vs-card p-5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 mb-3">
@@ -95,7 +96,9 @@ export default function AdminModelPage() {
               <div className="text-2xl font-bold text-blue-600">
                 {activeModel?.akurasi != null ? `${Math.round(Number(activeModel.akurasi) * 100)}%` : '—'}
               </div>
-              <div className="text-[12px] font-medium text-slate-400 mt-1">Akurasi Aktif</div>
+              <div className="text-[12px] font-medium text-slate-400 mt-1">
+                {lang === 'en' ? 'Active Accuracy' : 'Akurasi Aktif'}
+              </div>
             </div>
             <div className="vs-card p-5">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 mb-3">
@@ -104,7 +107,9 @@ export default function AdminModelPage() {
               <div className="text-2xl font-bold text-violet-600">
                 {activeModel?.f1_score != null ? `${Math.round(Number(activeModel.f1_score) * 100)}%` : '—'}
               </div>
-              <div className="text-[12px] font-medium text-slate-400 mt-1">F1-Score Aktif</div>
+              <div className="text-[12px] font-medium text-slate-400 mt-1">
+                {lang === 'en' ? 'Active F1-Score' : 'F1-Score Aktif'}
+              </div>
             </div>
           </motion.div>
 
@@ -112,7 +117,7 @@ export default function AdminModelPage() {
           <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.12, ease:[0.16,1,0.3,1] }} className="vs-card overflow-hidden">
             {/* Model pills */}
             <div className="border-b border-[var(--vs-line)] bg-slate-50/60 px-5 py-4">
-              <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">Pilih Model</p>
+              <p className="mb-3 text-[11px] font-bold uppercase tracking-wider text-slate-400">{t('model.selectModel') ?? 'Pilih Model'}</p>
               <div className="flex flex-wrap gap-2">
                 {modelHistory.map((m, idx) => {
                   const isActive = m.id === selectedId;
@@ -120,8 +125,8 @@ export default function AdminModelPage() {
                     <button key={m.id} onClick={() => setSelectedId(m.id)}
                       className={`flex flex-col items-start gap-0.5 rounded-xl border px-4 py-2.5 text-left transition-all ${
                         isActive
-                          ? 'border-blue-500 bg-blue-600 text-white shadow-sm'
-                          : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50'
+                           ? 'border-blue-500 bg-blue-600 text-white shadow-sm'
+                           : 'border-slate-200 bg-white text-slate-700 hover:border-blue-300 hover:bg-blue-50'
                       }`}>
                       <span className={`text-[10px] font-bold uppercase tracking-wide ${isActive ? 'text-blue-200' : 'text-slate-400'}`}>
                         Model #{modelHistory.length - idx}
@@ -129,7 +134,7 @@ export default function AdminModelPage() {
                       <span className="text-[13px] font-bold leading-tight">{m.algoritma}</span>
                       <div className="mt-1 flex items-center gap-2">
                         <span className={`text-[10px] ${isActive ? 'text-blue-200' : 'text-slate-400'}`}>
-                          {new Date(m.tanggal).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          {new Date(m.tanggal).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-bold ${
                           m.status === 'Aktif'
@@ -137,8 +142,8 @@ export default function AdminModelPage() {
                             : (isActive ? 'bg-white/10 text-blue-200' : 'bg-slate-100 text-slate-500')
                         }`}>
                           {m.status === 'Aktif'
-                            ? <><CheckCircle className="h-2.5 w-2.5" />Aktif</>
-                            : <><Clock className="h-2.5 w-2.5" />Nonaktif</>}
+                            ? <><CheckCircle className="h-2.5 w-2.5" />{lang === 'en' ? 'Active' : 'Aktif'}</>
+                            : <><Clock className="h-2.5 w-2.5" />{lang === 'en' ? 'Inactive' : 'Nonaktif'}</>}
                         </span>
                       </div>
                     </button>
@@ -151,7 +156,9 @@ export default function AdminModelPage() {
               <div className="grid gap-6 p-6 md:grid-cols-2">
                 {/* Metric bars */}
                 <div>
-                  <p className="mb-4 text-[12px] font-bold uppercase tracking-wider text-slate-400">Metrik Evaluasi</p>
+                  <p className="mb-4 text-[12px] font-bold uppercase tracking-wider text-slate-400">
+                    {lang === 'en' ? 'Evaluation Metrics' : 'Metrik Evaluasi'}
+                  </p>
                   <div className="space-y-4">
                     {METRICS.map(({ key, label, color, track }) => {
                       const raw = selected[key];
@@ -178,23 +185,23 @@ export default function AdminModelPage() {
                   {/* Info baris */}
                   <div className="mt-5 rounded-xl border border-slate-100 bg-slate-50 p-4 space-y-2">
                     <div className="flex justify-between text-[12px]">
-                      <span className="text-slate-500">Algoritma</span>
+                      <span className="text-slate-500">{lang === 'en' ? 'Algorithm' : 'Algoritma'}</span>
                       <span className="font-semibold text-slate-800">{selected.algoritma}</span>
                     </div>
                     <div className="flex justify-between text-[12px]">
-                      <span className="text-slate-500">Diproses oleh</span>
+                      <span className="text-slate-500">{lang === 'en' ? 'Processed by' : 'Diproses oleh'}</span>
                       <span className="font-semibold text-slate-800">{selected.processed_by ?? 'System'}</span>
                     </div>
                     <div className="flex justify-between text-[12px]">
-                      <span className="text-slate-500">Tanggal</span>
+                      <span className="text-slate-500">{lang === 'en' ? 'Date' : 'Tanggal'}</span>
                       <span className="font-semibold text-slate-800">
-                        {new Date(selected.tanggal).toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' })}
+                        {new Date(selected.tanggal).toLocaleString(lang === 'id' ? 'id-ID' : 'en-US', { dateStyle: 'medium', timeStyle: 'short' })}
                       </span>
                     </div>
                     <div className="flex justify-between text-[12px]">
                       <span className="text-slate-500">Status</span>
                       <span className={`font-bold ${selected.status === 'Aktif' ? 'text-emerald-600' : 'text-slate-500'}`}>
-                        {selected.status}
+                        {selected.status === 'Aktif' && lang === 'en' ? 'Active' : selected.status}
                       </span>
                     </div>
                   </div>
@@ -202,7 +209,9 @@ export default function AdminModelPage() {
 
                 {/* Feature importance */}
                 <div>
-                  <p className="mb-4 text-[12px] font-bold uppercase tracking-wider text-slate-400">Feature Importance (Top 10)</p>
+                  <p className="mb-4 text-[12px] font-bold uppercase tracking-wider text-slate-400">
+                    {t('model.featureImportance') ?? 'Feature Importance'} (Top 10)
+                  </p>
                   {loadingFeat ? (
                     <div className="flex items-center justify-center py-16">
                       <div className="h-6 w-6 animate-spin rounded-full border-2 border-blue-500 border-t-transparent" />
@@ -210,7 +219,9 @@ export default function AdminModelPage() {
                   ) : features.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-16 text-center">
                       <BarChart2 className="mb-2 h-8 w-8 text-slate-200" />
-                      <p className="text-[12px] text-slate-400">Tidak ada data feature importance untuk model ini</p>
+                      <p className="text-[12px] text-slate-400">
+                        {lang === 'en' ? 'No feature importance data for this model' : 'Tidak ada data feature importance untuk model ini'}
+                      </p>
                     </div>
                   ) : (
                     <div className="space-y-3">

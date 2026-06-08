@@ -29,9 +29,9 @@ export default function LogipPerformanceChart({ data = [] }) {
   const { t } = useLang();
 
   const tabs = [
-    { id: '6m', label: t('chart.sixMonths') ?? '6 bulan' },
-    { id: 'q', label: t('chart.quarter') ?? 'Kuartal' },
-    { id: 'y', label: t('chart.year') ?? 'Tahun' },
+    { id: '6m', label: t('chart.tab6m') ?? '6 bulan' },
+    { id: 'q', label: t('chart.tabQ') ?? 'Kuartal' },
+    { id: 'y', label: t('chart.tabY') ?? 'Tahun' },
   ];
 
   // Potong data sesuai tab yang dipilih (3 bulan, 6 bulan, atau 12 bulan/setahun)
@@ -51,8 +51,12 @@ export default function LogipPerformanceChart({ data = [] }) {
     <motion.div variants={fadeUp} className="rounded-[24px] border border-slate-200/90 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">Performa churn</h2>
-          <p className="mt-1 text-[13px] text-slate-500">Aktual vs target mitigasi AI</p>
+          <h2 className="text-lg font-bold tracking-tight text-slate-900 sm:text-xl">
+            {t('chart.title') ?? 'Performa churn'}
+          </h2>
+          <p className="mt-1 text-[13px] text-slate-500">
+            {t('chart.subtitle') ?? 'Aktual vs target mitigasi AI'}
+          </p>
         </div>
         <div className="flex rounded-full border border-slate-200/90 bg-slate-50/90 p-1">
           {tabs.map((t) => (
@@ -108,10 +112,10 @@ export default function LogipPerformanceChart({ data = [] }) {
       </div>
       <div className="mt-4 flex flex-wrap items-center gap-6 border-t border-slate-100 pt-4 text-[12px] font-semibold">
         <span className="flex items-center gap-2 text-slate-600">
-          <span className="h-2.5 w-8 rounded-full bg-[#2563EB]" /> Churn aktual
+          <span className="h-2.5 w-8 rounded-full bg-[#2563EB]" /> {t('chart.actualChurn') ?? 'Churn aktual'}
         </span>
         <span className="flex items-center gap-2 text-slate-600">
-          <span className="h-0.5 w-8 border-t-2 border-dashed border-orange-500" /> Target mitigasi
+          <span className="h-0.5 w-8 border-t-2 border-dashed border-orange-500" /> {t('chart.targetMitigation') ?? 'Target mitigasi'}
         </span>
       </div>
     </motion.div>

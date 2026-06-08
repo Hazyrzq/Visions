@@ -77,7 +77,7 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
 
   const formatTime = (dateStr) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    return new Date(dateStr).toLocaleString(lang === 'id' ? 'id-ID' : 'en-US', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -92,28 +92,28 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
               </div>
               <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white bg-emerald-500" title="Online" />
             </div>
-            <h3 className="mt-4 text-lg font-bold text-slate-900">{profile?.full_name ?? 'Pengguna'}</h3>
+            <h3 className="mt-4 text-lg font-bold text-slate-900">{profile?.full_name ?? (t('rightColumn.defaultUser') ?? 'Pengguna')}</h3>
             <p className="mt-0.5 text-[13px] font-medium text-slate-500">@{handle}</p>
           </div>
           <div className="mt-5 flex gap-2">
             <button
               type="button"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[var(--vs-brand-200)] hover:text-[var(--vs-brand)]"
-              aria-label="Telepon"
+              aria-label={t('rightColumn.phone') ?? 'Telepon'}
             >
               <Phone className="h-4 w-4" />
             </button>
             <button
               type="button"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[var(--vs-brand-200)] hover:text-[var(--vs-brand)]"
-              aria-label="Video"
+              aria-label={t('rightColumn.video') ?? 'Video'}
             >
               <Video className="h-4 w-4" />
             </button>
             <button
               type="button"
               className="flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:border-[var(--vs-brand-200)] hover:text-[var(--vs-brand)]"
-              aria-label="Menu"
+              aria-label={t('rightColumn.menu') ?? 'Menu'}
             >
               <MoreHorizontal className="h-4 w-4" />
             </button>
@@ -124,23 +124,23 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
       {/* Aktivitas tim */}
       <div className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
         <div className="mb-5 flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900">Aktivitas</h3>
+          <h3 className="text-base font-bold text-slate-900">{t('rightColumn.activityTitle') ?? 'Aktivitas'}</h3>
           <Link href={customerHref} className="text-[12px] font-semibold text-[var(--vs-brand)] hover:underline">
-            Lihat semua
+            {t('rightColumn.seeAll') ?? 'Lihat semua'}
           </Link>
         </div>
         
         {loading ? (
-          <p className="text-[12px] text-slate-500 text-center py-4">{t('notifications.loadingAlerts') ?? 'Memuat pemberitahuan...'}</p>
+          <p className="text-[12px] text-slate-500 text-center py-4">{t('rightColumn.loadingActivity') ?? 'Memuat aktivitas...'}</p>
         ) : activities.length === 0 ? (
-          <p className="text-[12px] text-slate-500 text-center py-4">{t('notifications.emptyAlerts') ?? 'Tidak ada pemberitahuan baru.'}</p>
+          <p className="text-[12px] text-slate-500 text-center py-4">{t('rightColumn.emptyActivity') ?? 'Belum ada aktivitas tim.'}</p>
         ) : (
           <ul className="relative space-y-0 before:absolute before:left-[15px] before:top-2 before:h-[calc(100%-16px)] before:w-px before:bg-slate-200">
             {activities.map((a) => {
               // Mapping data biar fleksibel misal nama kolom di DB kamu sedikit beda
-              const staffName = a.staff?.full_name || a.staff_name || 'System';
-              const companyName = a.customers?.company_name || a.company_name || 'Umum';
-              const description = a.notes || a.description || a.activity_type || 'Melakukan aktivitas';
+              const staffName = a.staff?.full_name || a.staff_name || (t('rightColumn.system') ?? 'System');
+              const companyName = a.customers?.company_name || a.company_name || (t('rightColumn.general') ?? 'Umum');
+              const description = a.notes || a.description || a.activity_type || (t('rightColumn.defaultAction') ?? 'Melakukan aktivitas');
 
               return (
                 <li key={a.id} className="relative flex gap-3 pb-6 last:pb-0">
@@ -150,7 +150,7 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
                   <div className="min-w-0 pt-0.5">
                     <p className="text-[13px] font-semibold text-slate-900">{staffName}</p>
                     <p className="mt-0.5 text-[12px] leading-relaxed text-slate-600">
-                      {companyName !== 'Umum' && <><span className="font-medium text-slate-800">{companyName}</span>{' · '}</>}
+                      {companyName !== (t('rightColumn.general') ?? 'Umum') && <><span className="font-medium text-slate-800">{companyName}</span>{' · '}</>}
                       {description}
                     </p>
                     <p className="mt-1 text-[11px] font-medium text-slate-400">
@@ -169,18 +169,18 @@ export default function LogipRightColumn({ activityFilterStaffId = null, custome
       <div className="rounded-[24px] border border-slate-200/80 bg-white p-5 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
           <Activity className="h-4 w-4 text-[var(--vs-brand)]" />
-          <h3 className="text-sm font-bold text-slate-900">Pemberitahuan</h3>
+          <h3 className="text-sm font-bold text-slate-900">{t('rightColumn.alertTitle') ?? 'Pemberitahuan'}</h3>
         </div>
         
         {loading ? (
-          <p className="text-[12px] text-slate-500 text-center py-4">Memuat pemberitahuan...</p>
+          <p className="text-[12px] text-slate-500 text-center py-4">{t('rightColumn.loadingAlerts') ?? 'Memuat pemberitahuan...'}</p>
         ) : alerts.length === 0 ? (
-          <p className="text-[12px] text-slate-500 text-center py-4">Tidak ada pemberitahuan baru.</p>
+          <p className="text-[12px] text-slate-500 text-center py-4">{t('rightColumn.emptyAlerts') ?? 'Tidak ada pemberitahuan baru.'}</p>
         ) : (
           <ul className="space-y-3">
             {alerts.map((a) => {
               const type = a.type || a.risk_level || 'info';
-              const title = a.title || 'Pemberitahuan';
+              const title = a.title || (t('rightColumn.alertTitle') ?? 'Pemberitahuan');
               const message = a.message || a.description || '';
               
               return (

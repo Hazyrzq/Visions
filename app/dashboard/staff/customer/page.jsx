@@ -10,8 +10,10 @@ import CustomerDetailDrawer from '@/components/customer/CustomerDetailDrawer';
 import { supabase } from '@/lib/supabase';
 import DashboardShell from '@/components/dashboard/DashboardShell';
 import { hrefWithCustomerDetail, hrefWithoutCustomerDetail } from '@/lib/customerDetailNav';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 function StaffCustomerInner() {
+  const { t } = useLang();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -55,8 +57,8 @@ function StaffCustomerInner() {
 
   return (
     <DashboardShell
-      title="Pelanggan saya"
-      description="Daftar pelanggan yang di-assign ke Anda."
+      title={t('nav.myCustomers')}
+      description={t('report.myReportDesc')}
       icon={Users}
     >
       <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.4, delay:0.1, ease:[0.16,1,0.3,1] }}>
@@ -78,8 +80,9 @@ function StaffCustomerInner() {
 }
 
 function StaffCustomerFallback() {
+  const { t } = useLang();
   return (
-    <DashboardShell title="Pelanggan saya" description="Memuat…" icon={Users}>
+    <DashboardShell title={t('nav.myCustomers')} description={t('customer.loading')} icon={Users}>
       <div className="flex items-center justify-center p-16">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-[var(--vs-brand)] border-t-transparent" />
       </div>

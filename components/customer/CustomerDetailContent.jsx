@@ -98,6 +98,21 @@ export default function CustomerDetailContent({ customerId }) {
   const [analLoading, setAnalLoading]         = useState(false);
   const [analError, setAnalError]             = useState('');
 
+  // What-If Simulator states
+  const [simOpen, setSimOpen]                 = useState(false);
+  const [simLogin, setSimLogin]               = useState(0);
+  const [simNps, setSimNps]                   = useState(0);
+  const [simTickets, setSimTickets]           = useState(0);
+
+  // Initialize simulator state when customer loads
+  useEffect(() => {
+    if (customer) {
+      setSimLogin(customer.days_since_login ?? 0);
+      setSimNps(Number(customer.avg_nps_score ?? 0));
+      setSimTickets(customer.total_tickets ?? 0);
+    }
+  }, [customer]);
+
   useEffect(() => {
     setRekResult(null); setRekError('');
     setAnalResult(null); setAnalError('');
@@ -140,7 +155,7 @@ export default function CustomerDetailContent({ customerId }) {
     if (!customer?.customer_id) return;
     setRekLoading(true); setRekError('');
     try {
-      const res = await getRekomendasi(customer.customer_id);
+      const res = await getRekomendasi(customer.customer_id, lang);
       setRekResult(res?.rekomendasi ?? res?.result ?? res?.message ?? JSON.stringify(res));
     } catch (e) { setRekError(e.message); }
     finally { setRekLoading(false); }
@@ -150,11 +165,38 @@ export default function CustomerDetailContent({ customerId }) {
     if (!customer?.customer_id) return;
     setAnalLoading(true); setAnalError('');
     try {
-      const res = await getAnalisis(customer.customer_id);
+      const res = await getAnalisis(customer.customer_id, lang);
       setAnalResult(res?.analisis ?? res?.result ?? res?.message ?? JSON.stringify(res));
     } catch (e) { setAnalError(e.message); }
     finally { setAnalLoading(false); }
   };
+
+  // Refetch data jika bahasa berubah dan sebelumnya sudah di-fetch
+  useEffect(() => {
+    if (!customer?.customer_id) return;
+    
+    const refetchAll = async () => {
+      if (rekResult) {
+        setRekLoading(true); setRekError('');
+        try {
+          const res = await getRekomendasi(customer.customer_id, lang);
+          setRekResult(res?.rekomendasi ?? res?.result ?? res?.message ?? JSON.stringify(res));
+        } catch (e) { setRekError(e.message); }
+        finally { setRekLoading(false); }
+      }
+      if (analResult) {
+        setAnalLoading(true); setAnalError('');
+        try {
+          const res = await getAnalisis(customer.customer_id, lang);
+          setAnalResult(res?.analisis ?? res?.result ?? res?.message ?? JSON.stringify(res));
+        } catch (e) { setAnalError(e.message); }
+        finally { setAnalLoading(false); }
+      }
+    };
+
+    refetchAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [lang]);
 
   const formatDate = (d) =>
     new Intl.DateTimeFormat(lang === 'en' ? 'en-US' : 'id-ID', {

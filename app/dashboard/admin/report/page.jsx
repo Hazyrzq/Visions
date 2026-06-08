@@ -7,7 +7,7 @@ import {
   BarChart2, Download, RefreshCw, TrendingDown, Activity,
   CheckCircle2, AlertTriangle, X, ChevronRight, Info,
   ArrowUpRight, ArrowDownRight, Minus, Phone, Mail, CalendarDays,
-  FileEdit, Cpu, Clock, CheckCircle,
+  FileEdit, Cpu, Clock, CheckCircle, Zap, Sparkles, MessageSquare, ThumbsUp
 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -18,6 +18,7 @@ import DashboardShell from '@/components/dashboard/DashboardShell';
 import MetricCard from '@/components/dashboard/MetricCard';
 import RiskBadge from '@/components/dashboard/RiskBadge';
 import { fadeUp, stagger, pageVariants, scaleIn } from '@/lib/motion';
+import { useLang } from '@/lib/i18n/LanguageContext';
 
 // ─── helpers ──────────────────────────────────────────────────────────
 const ini = (n) =>
@@ -227,7 +228,7 @@ function StaffModal({ staff, onClose }) {
 }
 
 // ─── Export PDF ────────────────────────────────────────────────────────
-function buildPrintHtml({ metrics, staffPerf, customers, staffList, modelHistory, generated }) {
+function buildPrintHtml({ metrics, staffPerf, customers, staffList, modelHistory, generated, lang }) {
   const high  = customers.filter(c=>c.risk_level==='Tinggi'||c.risk_level==='High');
   const mid   = customers.filter(c=>c.risk_level==='Sedang'||c.risk_level==='Medium');
   const low   = customers.filter(c=>c.risk_level==='Rendah'||c.risk_level==='Low');
@@ -238,36 +239,81 @@ function buildPrintHtml({ metrics, staffPerf, customers, staffList, modelHistory
   const th = (s) => `<th style="text-align:left;padding:8px 10px;border:1px solid #e2e8f0;background:#f1f5f9;font-size:11px">${s}</th>`;
   const tc = (s, center=false, extra='') => `<td style="padding:8px 10px;border:1px solid #e2e8f0;${center?'text-align:center;':''}${extra}font-size:12px">${s}</td>`;
 
+  const labels = {
+    title: lang === 'en' ? 'ChurnShield Report' : 'Laporan ChurnShield',
+    created: lang === 'en' ? 'Created' : 'Dibuat',
+    riskSummary: lang === 'en' ? '1. Customer Churn Risk Summary' : '1. Ringkasan Risiko Pelanggan',
+    category: lang === 'en' ? 'Category' : 'Kategori',
+    amount: lang === 'en' ? 'Count' : 'Jumlah',
+    percentage: lang === 'en' ? 'Percentage' : 'Persentase',
+    note: lang === 'en' ? 'Note' : 'Keterangan',
+    highRisk: lang === 'en' ? 'High Risk' : 'High Risk (Tinggi)',
+    midRisk: lang === 'en' ? 'Medium Risk' : 'Medium Risk (Sedang)',
+    lowRisk: lang === 'en' ? 'Low Risk' : 'Low Risk (Rendah)',
+    highAction: lang === 'en' ? 'Requires immediate action' : 'Butuh tindakan segera',
+    midAction: lang === 'en' ? 'Monitor periodically' : 'Perlu dipantau berkala',
+    lowAction: lang === 'en' ? 'Safe, maintain engagement' : 'Aman, pertahankan engagement',
+    retained: lang === 'en' ? 'Successfully Retained' : 'Berhasil Diretain',
+    retRate: lang === 'en' ? 'Overall retention rate' : 'Retention rate keseluruhan',
+    churned: lang === 'en' ? 'Total Churned' : 'Total Churn',
+    churnedSub: lang === 'en' ? 'Customers churned' : 'Pelanggan yang churn',
+    teamActs: lang === 'en' ? 'Team Activities This Month' : 'Aktivitas Tim Bulan Ini',
+    currentMonth: lang === 'en' ? 'Current month' : 'Bulan berjalan',
+    teamPerf: lang === 'en' ? '2. Customer Success Team Performance' : '2. Performa Tim Customer Success',
+    thStaff: lang === 'en' ? ['Staff Name','Email','Assigned','Activities','Success Rate','Workload','Performance'] : ['Nama Staff','Email','Assigned','Aktivitas','Success Rate','Workload','Performa'],
+    perfExcellent: lang === 'en' ? 'Excellent' : 'Sangat Baik',
+    perfGood: lang === 'en' ? 'Good' : 'Baik',
+    perfFair: lang === 'en' ? 'Fair' : 'Cukup',
+    perfNeedsAttention: lang === 'en' ? 'Needs Attention' : 'Perlu Perhatian',
+    highRiskList: lang === 'en' ? `3. High Risk Customer List (${high.length} customers)` : `3. Daftar Pelanggan High Risk (${high.length} pelanggan)`,
+    thHighRiskList: lang === 'en' ? ['#','ID','Company','Plan','Churn Score','NPS','Last Login','CS Pic'] : ['#','ID','Perusahaan','Plan','Churn Score','NPS','Last Login','PIC'],
+    daysAgo: lang === 'en' ? 'days ago' : 'hari lalu',
+    unassigned: lang === 'en' ? 'Unassigned' : 'Belum diassign',
+    mlInfoTitle: lang === 'en' ? '4. ML Model Information' : '4. Informasi Model ML',
+    thMlInfo: lang === 'en' ? ['Algorithm','Status','Accuracy','AUC-ROC','Precision','Recall','F1-Score','Date','Processed By'] : ['Algoritma','Status','Akurasi','AUC-ROC','Precision','Recall','F1-Score','Tanggal','Diproses Oleh'],
+    noMlInfo: lang === 'en' ? 'No ML model data available.' : 'Belum ada data model ML.',
+    footerText: lang === 'en' ? 'Visions - ChurnShield | Customer Success Report' : 'Visions - ChurnShield | Laporan Customer Success',
+    totalText: lang === 'en' ? 'Total' : 'Total',
+    customersUnit: lang === 'en' ? 'customers' : 'pelanggan'
+  };
+
+  const getPerfText = (rate) => {
+    return rate >= 80 ? labels.perfExcellent
+         : rate >= 60 ? labels.perfGood
+         : rate >= 40 ? labels.perfFair
+         : labels.perfNeedsAttention;
+  };
+
   return `
 <div style="font-family:system-ui,sans-serif;color:#0f172a;max-width:780px;margin:0 auto">
   <div style="border-bottom:3px solid #2563eb;padding-bottom:14px;margin-bottom:22px">
-    <h1 style="font-size:22px;font-weight:800;margin:0 0 4px">Laporan ChurnShield</h1>
-    <p style="color:#64748b;margin:0;font-size:12px">Dibuat: ${generated} | Visions Platform</p>
+    <h1 style="font-size:22px;font-weight:800;margin:0 0 4px">${labels.title}</h1>
+    <p style="color:#64748b;margin:0;font-size:12px">${labels.created}: ${generated} | Visions Platform</p>
   </div>
 
   <!-- 1. Ringkasan -->
-  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #2563eb;padding-left:10px;margin:0 0 10px">1. Ringkasan Risiko Pelanggan</h2>
+  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #2563eb;padding-left:10px;margin:0 0 10px">${labels.riskSummary}</h2>
   <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
-    <thead><tr>${['Kategori','Jumlah','Persentase','Keterangan'].map(th).join('')}</tr></thead>
+    <thead><tr>${[labels.category, labels.amount, labels.percentage, labels.note].map(th).join('')}</tr></thead>
     <tbody>
-      <tr>${tc('High Risk (Tinggi)','',`font-weight:700;color:#dc2626;`)}${tc(String(high.length),true,'font-weight:700;font-size:14px')}${tc(`${pct(high.length)}%`,true)}${tc('Butuh tindakan segera')}</tr>
-      <tr style="background:#f8fafc">${tc('Medium Risk (Sedang)','',`font-weight:700;color:#d97706;`)}${tc(String(mid.length),true,'font-weight:700;font-size:14px')}${tc(`${pct(mid.length)}%`,true)}${tc('Perlu dipantau berkala')}</tr>
-      <tr>${tc('Low Risk (Rendah)','',`font-weight:700;color:#16a34a;`)}${tc(String(low.length),true,'font-weight:700;font-size:14px')}${tc(`${pct(low.length)}%`,true)}${tc('Aman, pertahankan engagement')}</tr>
-      <tr style="background:#eff6ff">${tc('Berhasil Diretain','',`font-weight:700;color:#2563eb;`)}${tc(String(metrics.retained),true,'font-weight:700;font-size:14px')}${tc(`${metrics.retRate}%`,true)}${tc('Retention rate keseluruhan')}</tr>
-      <tr style="background:#fff7ed">${tc('Total Churn','',`font-weight:700;color:#ea580c;`)}${tc(String(metrics.churned),true,'font-weight:700;font-size:14px')}${tc(`${pct(metrics.churned)}%`,true)}${tc('Pelanggan yang churn')}</tr>
-      <tr style="background:#f0fdf4">${tc('Aktivitas Tim Bulan Ini','',`font-weight:700;`)}${tc(String(metrics.totalActs),true,'font-weight:700;font-size:14px')}${tc('—',true)}${tc('Bulan berjalan')}</tr>
+      <tr>${tc(labels.highRisk,'',`font-weight:700;color:#dc2626;`)}${tc(String(high.length),true,'font-weight:700;font-size:14px')}${tc(`${pct(high.length)}%`,true)}${tc(labels.highAction)}</tr>
+      <tr style="background:#f8fafc">${tc(labels.midRisk,'',`font-weight:700;color:#d97706;`)}${tc(String(mid.length),true,'font-weight:700;font-size:14px')}${tc(`${pct(mid.length)}%`,true)}${tc(labels.midAction)}</tr>
+      <tr>${tc(labels.lowRisk,'',`font-weight:700;color:#16a34a;`)}${tc(String(low.length),true,'font-weight:700;font-size:14px')}${tc(`${pct(low.length)}%`,true)}${tc(labels.lowAction)}</tr>
+      <tr style="background:#eff6ff">${tc(labels.retained,'',`font-weight:700;color:#2563eb;`)}${tc(String(metrics.retained),true,'font-weight:700;font-size:14px')}${tc(`${metrics.retRate}%`,true)}${tc(labels.retRate)}</tr>
+      <tr style="background:#fff7ed">${tc(labels.churned,'',`font-weight:700;color:#ea580c;`)}${tc(String(metrics.churned),true,'font-weight:700;font-size:14px')}${tc(`${pct(metrics.churned)}%`,true)}${tc(labels.churnedSub)}</tr>
+      <tr style="background:#f0fdf4">${tc(labels.teamActs,'',`font-weight:700;`)}${tc(String(metrics.totalActs),true,'font-weight:700;font-size:14px')}${tc('—',true)}${tc(labels.currentMonth)}</tr>
     </tbody>
   </table>
 
   <!-- 2. Staff performance -->
-  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #2563eb;padding-left:10px;margin:0 0 10px">2. Performa Tim Customer Success</h2>
+  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #2563eb;padding-left:10px;margin:0 0 10px">${labels.teamPerf}</h2>
   <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
     <thead><tr style="background:#1e3a8a;color:#fff">
-      ${['Nama Staff','Email','Assigned','Aktivitas','Success Rate','Workload','Performa'].map(h=>`<th style="text-align:left;padding:8px 10px;font-size:11px">${h}</th>`).join('')}
+      ${labels.thStaff.map(h=>`<th style="text-align:left;padding:8px 10px;font-size:11px">${h}</th>`).join('')}
     </tr></thead>
     <tbody>
       ${staffPerf.map((s,i)=>{
-        const p=perfLabel(s.success);
+        const pTxt = getPerfText(s.success);
         return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-weight:600;font-size:12px">${s.full_name}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;font-size:11px;color:#64748b">${s.email}</td>
@@ -275,17 +321,17 @@ function buildPrintHtml({ metrics, staffPerf, customers, staffList, modelHistory
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px">${s.myActs.length}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-weight:700;font-size:12px;color:${s.success>=60?'#16a34a':'#dc2626'}">${s.success}%</td>
           <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:12px">${s.workload}%</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;font-weight:700">${p.text}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #e2e8f0;text-align:center;font-size:11px;font-weight:700">${pTxt}</td>
         </tr>`;
       }).join('')}
     </tbody>
   </table>
 
   <!-- 3. High Risk customers -->
-  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #ef4444;padding-left:10px;margin:0 0 10px">3. Daftar Pelanggan High Risk (${high.length} pelanggan)</h2>
+  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #ef4444;padding-left:10px;margin:0 0 10px">${labels.highRiskList}</h2>
   <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
     <thead><tr style="background:#fef2f2">
-      ${['#','ID','Perusahaan','Plan','Churn Score','NPS','Last Login','PIC'].map(h=>`<th style="text-align:left;padding:8px;border:1px solid #fecaca;font-size:11px">${h}</th>`).join('')}
+      ${labels.thHighRiskList.map(h=>`<th style="text-align:left;padding:8px;border:1px solid #fecaca;font-size:11px">${h}</th>`).join('')}
     </tr></thead>
     <tbody>
       ${high.sort((a,b)=>(b.churn_score??0)-(a.churn_score??0)).map((c,i)=>`
@@ -296,39 +342,39 @@ function buildPrintHtml({ metrics, staffPerf, customers, staffList, modelHistory
           <td style="padding:7px 8px;border:1px solid #fecaca;font-size:11px">${c.plan_type??'—'}</td>
           <td style="padding:7px 8px;border:1px solid #fecaca;text-align:center;font-weight:700;color:#dc2626;font-size:11px">${c.churn_score??'—'}%</td>
           <td style="padding:7px 8px;border:1px solid #fecaca;text-align:center;font-size:11px">${c.avg_nps_score!=null?`${c.avg_nps_score}/10`:'—'}</td>
-          <td style="padding:7px 8px;border:1px solid #fecaca;text-align:center;font-size:11px">${c.days_since_login!=null?`${c.days_since_login}h lalu`:'—'}</td>
-          <td style="padding:7px 8px;border:1px solid #fecaca;font-size:11px">${staffList.find(s=>s.id===c.assigned_to)?.full_name??'Belum diassign'}</td>
+          <td style="padding:7px 8px;border:1px solid #fecaca;text-align:center;font-size:11px">${c.days_since_login!=null?`${c.days_since_login} ${labels.daysAgo}`:'—'}</td>
+          <td style="padding:7px 8px;border:1px solid #fecaca;font-size:11px">${staffList.find(s=>s.id===c.assigned_to)?.full_name??labels.unassigned}</td>
         </tr>`).join('')}
     </tbody>
   </table>
 
   <!-- 4. Model ML -->
-  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #7c3aed;padding-left:10px;margin:0 0 10px">4. Informasi Model ML</h2>
+  <h2 style="font-size:14px;font-weight:700;border-left:4px solid #7c3aed;padding-left:10px;margin:0 0 10px">${labels.mlInfoTitle}</h2>
   ${activeModel ? `
   <table style="width:100%;border-collapse:collapse;margin-bottom:12px">
-    <thead><tr>${['Algoritma','Status','Akurasi','AUC-ROC','Precision','Recall','F1-Score','Tanggal','Diproses Oleh'].map(th).join('')}</tr></thead>
+    <thead><tr>${labels.thMlInfo.map(th).join('')}</tr></thead>
     <tbody>
       ${modelHistory.map((m,i)=>{
         const fmt=(v)=>{ const r=fmtMetric(v); return r!=null?`${r}%`:'—'; };
         return `<tr style="background:${i%2===0?'#fff':'#f8fafc'}">
           <td style="padding:8px 10px;border:1px solid #e2e8f0;font-weight:600;font-size:12px">${m.algoritma}</td>
-          <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:12px;font-weight:700;color:${m.status==='Aktif'?'#16a34a':'#64748b'}">${m.status}</td>
+          <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:12px;font-weight:700;color:${m.status==='Aktif'?'#16a34a':'#64748b'}">${m.status === 'Aktif' && lang === 'en' ? 'Active' : m.status}</td>
           <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12px;font-weight:700;color:#2563eb">${fmt(m.akurasi)}</td>
           <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12px">${fmt(m.auc_roc)}</td>
           <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12px">${fmt(m.precision_churn)}</td>
           <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12px">${fmt(m.recall_churn)}</td>
           <td style="padding:8px 10px;border:1px solid #e2e8f0;text-align:center;font-size:12px">${fmt(m.f1_score)}</td>
-          <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:11px;color:#64748b">${new Date(m.tanggal).toLocaleDateString('id-ID',{day:'numeric',month:'short',year:'numeric'})}</td>
+          <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:11px;color:#64748b">${new Date(m.tanggal).toLocaleDateString(lang === 'id' ? 'id-ID' : 'en-US',{day:'numeric',month:'short',year:'numeric'})}</td>
           <td style="padding:8px 10px;border:1px solid #e2e8f0;font-size:11px">${m.processed_by??'System'}</td>
         </tr>`;
       }).join('')}
     </tbody>
   </table>
-  ` : '<p style="font-size:12px;color:#94a3b8;margin-bottom:24px">Belum ada data model ML.</p>'}
+  ` : `<p style="font-size:12px;color:#94a3b8;margin-bottom:24px">${labels.noMlInfo}</p>`}
 
   <div style="border-top:1px solid #e2e8f0;padding-top:12px;display:flex;justify-content:space-between;color:#94a3b8;font-size:10px;margin-top:8px">
-    <span>Visions - ChurnShield | Laporan Customer Success</span>
-    <span>Total: ${total} pelanggan | ${generated}</span>
+    <span>${labels.footerText}</span>
+    <span>${labels.totalText}: ${total} ${labels.customersUnit} | ${generated}</span>
   </div>
 </div>`;
 }
@@ -374,6 +420,7 @@ const GRAN_OPTIONS = [
 ];
 
 export default function AdminReportPage() {
+  const { t, lang } = useLang();
   const [tab, setTab]                       = useState('Laporan');
   const [loading, setLoading]               = useState(true);
   const [customers, setCustomers]           = useState([]);
@@ -390,6 +437,12 @@ export default function AdminReportPage() {
   const [granType, setGranType]           = useState('yearly');
   const [selectedYear, setSelectedYear]   = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth()); // 0-11
+
+  const granOptions = [
+    { id:'yearly',  label: t('report.yearly') ?? 'Tahunan',  hint: t('report.yearlyHint') ?? 'Semua tahun tersedia' },
+    { id:'monthly', label: t('report.monthly') ?? 'Bulanan',  hint: t('report.monthlyHint') ?? 'Pilih tahun' },
+    { id:'daily',   label: t('report.daily') ?? 'Harian',   hint: t('report.dailyHint') ?? 'Pilih bulan' },
+  ];
 
   // ── fetch ─────────────────────────────────────────────────────────
   const fetchAll = useCallback(async () => {
@@ -541,36 +594,43 @@ export default function AdminReportPage() {
   // ═════════════════════════════════════════════════════════════════
   return (
     <DashboardShell
-      title="Reports"
-      description="Analisis performa tim, tren risiko churn, dan retensi pelanggan."
+      title={t('report.title') ?? 'Laporan'}
+      description={lang === 'en' ? 'Analysis of team performance, churn risk trends, and customer retention.' : 'Analisis performa tim, tren risiko churn, dan retensi pelanggan.'}
       icon={BarChart2}
       actions={
         <div className="flex items-center gap-2">
           <button onClick={fetchAll} className="vs-btn vs-btn--ghost gap-2 text-[12px]">
-            <RefreshCw className="h-3.5 w-3.5"/> Refresh
+            <RefreshCw className="h-3.5 w-3.5"/> {t('report.refresh') ?? 'Refresh'}
           </button>
           <button
             onClick={()=>triggerExport({
               metrics:{total,atRisk,retained,churned,retRate,totalActs:actsMonth.length},
               staffPerf, customers, staffList, modelHistory,
               generated: fdDate(new Date().toISOString()),
+              lang,
             })}
             className="vs-btn vs-btn--primary gap-2 text-[12px]"
           >
-            <Download className="h-3.5 w-3.5"/> Export PDF
+            <Download className="h-3.5 w-3.5"/> {t('report.exportPdf') ?? 'Export PDF'}
           </button>
         </div>
       }
     >
       {/* Tabs */}
       <div className="mb-2 flex w-fit gap-1 rounded-xl border border-slate-200 bg-slate-50 p-1">
-        {['Laporan','Model ML'].map(t=>(
-          <button key={t} onClick={()=>setTab(t)}
+        {[
+          { id: 'Laporan', label: t('report.title') ?? 'Laporan' },
+          { id: 'ML', label: t('report.ml') ?? 'ML' },
+          { id: 'Asisten AI', label: t('report.chatbot') ?? 'Asisten AI' }
+        ].map(tabItem=>(
+          <button key={tabItem.id} onClick={()=>setTab(tabItem.id)}
             className={`flex items-center gap-2 rounded-lg px-4 py-2 text-[13px] font-semibold transition-all ${
-              tab===t?'bg-white text-slate-900 shadow-sm':'text-slate-500 hover:text-slate-800'
+              tab===tabItem.id?'bg-white text-slate-900 shadow-sm':'text-slate-500 hover:text-slate-800'
             }`}>
-            {t==='Laporan'?<BarChart2 className="h-4 w-4"/>:<Cpu className="h-4 w-4"/>}
-            {t}
+            {tabItem.id==='Laporan' && <BarChart2 className="h-4 w-4"/>}
+            {tabItem.id==='ML' && <Cpu className="h-4 w-4"/>}
+            {tabItem.id==='Asisten AI' && <Sparkles className="h-4 w-4"/>}
+            {tabItem.label}
           </button>
         ))}
       </div>
@@ -587,10 +647,10 @@ export default function AdminReportPage() {
           {/* Metric cards */}
           <motion.div variants={stagger} className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
             {[
-              {title:'Pelanggan At-Risk', value:atRisk,           icon:TrendingDown,  color:'red',     subtitle:`dari ${total} total pelanggan`},
-              {title:'Berhasil Diretain', value:retained,         icon:CheckCircle2,  color:'emerald', subtitle:`${retRate}% retention rate`},
-              {title:'Total Churn',       value:churned,          icon:AlertTriangle, color:'amber',   subtitle:`${total>0?Math.round((churned/total)*100):0}% dari total`},
-              {title:'Aktivitas Tim',     value:actsMonth.length, icon:Activity,      color:'indigo',  subtitle:'Bulan berjalan'},
+              {title: t('report.atRisk') ?? 'Pelanggan At-Risk', value:atRisk,           icon:TrendingDown,  color:'red',     subtitle: t('report.atRiskSub', { total }) ?? `dari ${total} total pelanggan`},
+              {title: t('report.retained') ?? 'Berhasil Diretain', value:retained,         icon:CheckCircle2,  color:'emerald', subtitle: t('report.retainedSub', { rate: retRate }) ?? `${retRate}% retention rate`},
+              {title: t('report.totalChurn') ?? 'Total Churn',       value:churned,          icon:AlertTriangle, color:'amber',   subtitle: t('report.totalChurnSub', { pct: total>0?Math.round((churned/total)*100):0 }) ?? `${total>0?Math.round((churned/total)*100):0}% dari total`},
+              {title: t('report.teamActivities') ?? 'Aktivitas Tim',     value:actsMonth.length, icon:Activity,      color:'indigo',  subtitle: t('report.teamActivitiesSub') ?? 'Bulan berjalan'},
             ].map(m=>(
               <motion.div key={m.title} variants={fadeUp}><MetricCard {...m}/></motion.div>
             ))}
@@ -601,19 +661,17 @@ export default function AdminReportPage() {
             <div className="border-b border-slate-100 px-6 py-5">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                 <div>
-                  <h2 className="text-[15px] font-bold text-slate-900">Diretain vs Churn — {chartTitle}</h2>
+                  <h2 className="text-[15px] font-bold text-slate-900">{t('report.retainedVsChurn', { title: chartTitle }) ?? `Diretain vs Churn — ${chartTitle}`}</h2>
                   <p className="mt-1 max-w-lg text-[13px] leading-relaxed text-slate-500">
-                    Bar <strong className="text-emerald-600">hijau</strong> = pelanggan aman (score &lt;50).
-                    Bar <strong className="text-red-600">merah</strong> = berisiko churn (score ≥50).
-                    Hijau harus selalu lebih tinggi dari merah.
+                    {t('report.retainedVsChurnDesc') ?? 'Bar hijau = pelanggan aman (score <50). Bar merah = berisiko churn (score ≥50). Hijau harus selalu lebih tinggi dari merah.'}
                   </p>
                 </div>
                 <div className="flex shrink-0 flex-col gap-1 sm:items-end">
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-3 py-1 text-[12px] font-bold text-emerald-700">
-                    <span className="h-2 w-2 rounded-full bg-emerald-500"/> {totalRetain.toLocaleString('id-ID')} aman
+                    <span className="h-2 w-2 rounded-full bg-emerald-500"/> {t('report.safeCount', { count: totalRetain }) ?? `${totalRetain.toLocaleString(lang === 'id' ? 'id-ID' : 'en-US')} aman`}
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full bg-red-50 px-3 py-1 text-[12px] font-bold text-red-700">
-                    <span className="h-2 w-2 rounded-full bg-red-500"/> {totalChurnC.toLocaleString('id-ID')} churn
+                    <span className="h-2 w-2 rounded-full bg-red-500"/> {t('report.churnCount', { count: totalChurnC }) ?? `${totalChurnC.toLocaleString(lang === 'id' ? 'id-ID' : 'en-US')} churn`}
                   </span>
                 </div>
               </div>
@@ -622,7 +680,7 @@ export default function AdminReportPage() {
               <div className="mt-4 flex flex-wrap items-center gap-3">
                 {/* Granularity tabs */}
                 <div className="flex rounded-xl border border-slate-200 bg-slate-50 p-1">
-                  {GRAN_OPTIONS.map(g=>(
+                  {granOptions.map(g=>(
                     <button key={g.id} onClick={()=>setGranType(g.id)} title={g.hint}
                       className={`rounded-lg px-3 py-1.5 text-[12px] font-semibold transition-all ${
                         granType===g.id?'bg-white text-slate-900 shadow-sm':'text-slate-500 hover:text-slate-700'
@@ -738,8 +796,8 @@ export default function AdminReportPage() {
                   <Info className={`mt-0.5 h-4 w-4 shrink-0 ${highDiff>0?'text-red-500':'text-emerald-500'}`}/>
                   <p className={`text-[12px] leading-relaxed ${highDiff>0?'text-red-700':'text-emerald-700'}`}>
                     {highDiff>0
-                      ? `Pelanggan High Risk bertambah ${highDiff} dibanding bulan lalu. Tingkatkan tindak lanjut tim.`
-                      : `Pelanggan High Risk berkurang ${Math.abs(highDiff)} dibanding bulan lalu. Upaya retensi efektif.`}
+                      ? (lang === 'en' ? `High Risk customers increased by ${highDiff} compared to last month. Increase team follow-up.` : `Pelanggan High Risk bertambah ${highDiff} dibanding bulan lalu. Tingkatkan tindak lanjut tim.`)
+                      : (lang === 'en' ? `High Risk customers decreased by ${Math.abs(highDiff)} compared to last month. Retention efforts are effective.` : `Pelanggan High Risk berkurang ${Math.abs(highDiff)} dibanding bulan lalu. Upaya retensi efektif.`)}
                   </p>
                 </div>
               )}
@@ -750,21 +808,21 @@ export default function AdminReportPage() {
           <motion.div variants={fadeUp} className="vs-card overflow-hidden">
             <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-5 py-4">
               <div>
-                <h2 className="text-[15px] font-bold text-slate-900">Performa Tim Customer Success</h2>
-                <p className="mt-0.5 text-[12px] text-slate-400">Klik baris staff untuk melihat detail</p>
+                <h2 className="text-[15px] font-bold text-slate-900">{t('report.teamPerf') ?? 'Performa Tim Customer Success'}</h2>
+                <p className="mt-0.5 text-[12px] text-slate-400">{lang === 'en' ? 'Click staff row to view details' : 'Klik baris staff untuk melihat detail'}</p>
               </div>
               <span className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold text-blue-600">
-                {staffList.length} staf aktif
+                {staffList.length} {lang === 'en' ? 'active staff' : 'staf aktif'}
               </span>
             </div>
 
             {staffPerf.length===0 ? (
-              <div className="py-16 text-center text-[13px] text-slate-400">Belum ada data staff.</div>
+              <div className="py-16 text-center text-[13px] text-slate-400">{lang === 'en' ? 'No staff data yet.' : 'Belum ada data staff.'}</div>
             ) : (
               <>
                 <div className="hidden border-b border-slate-100 bg-slate-50/40 px-5 py-2.5 lg:grid"
                   style={{gridTemplateColumns:'2fr 1fr 1.5fr 1fr 1.5fr 1fr 20px'}}>
-                  {['Staff','Assigned','Aktivitas Bln Ini','Success Rate','Workload','Performa',''].map((h,i)=>(
+                  {(lang === 'en' ? ['Staff','Assigned','Activities This Month','Success Rate','Workload','Performance',''] : ['Staff','Assigned','Aktivitas Bln Ini','Success Rate','Workload','Performa','']).map((h,i)=>(
                     <span key={i} className="text-[11px] font-bold uppercase tracking-wider text-slate-400">{h}</span>
                   ))}
                 </div>
@@ -787,10 +845,10 @@ export default function AdminReportPage() {
                         </div>
                         <div>
                           <span className="text-[15px] font-bold text-slate-800">{s.mine.length}</span>
-                          <span className="ml-1 text-[11px] text-slate-400">pelanggan</span>
+                          <span className="ml-1 text-[11px] text-slate-400">{lang === 'en' ? 'customers' : 'pelanggan'}</span>
                         </div>
                         <div className="flex flex-col gap-1">
-                          <span className="text-[13px] font-bold text-slate-800">{s.myActs.length} aktivitas</span>
+                          <span className="text-[13px] font-bold text-slate-800">{s.myActs.length} {lang === 'en' ? 'activities' : 'aktivitas'}</span>
                           <div className="flex flex-wrap gap-1">
                             {Object.entries(s.byType).slice(0,3).map(([type,count])=>{
                               const m=ACT[type]??ACT.other; const Icon=m.Icon;
@@ -817,7 +875,7 @@ export default function AdminReportPage() {
           </motion.div>
         </motion.div>
 
-      ) : (
+      ) : tab==='ML' ? (
         /* ══ TAB MODEL ML ═════════════════════════════════════════════ */
         <motion.div variants={pageVariants} initial="hidden" animate="visible" className="space-y-5">
           {modelHistory.length===0 ? (
@@ -959,11 +1017,140 @@ export default function AdminReportPage() {
                         </div>
                       )}
                     </div>
+                    
+                    {/* ML Explanation Section */}
+                    <div className="border-t border-slate-100 p-6 bg-slate-50/20">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Cpu className="h-5 w-5 text-blue-600" />
+                        <h4 className="text-[14px] font-bold text-slate-900">Bagaimana Sistem ML ChurnShield Bekerja?</h4>
+                      </div>
+                      <p className="text-[13px] leading-relaxed text-slate-500 mb-4">
+                        Model AI memproses data histori pelanggan Anda dengan alur kompilasi data berikut untuk mendeteksi risiko churn:
+                      </p>
+                      <div className="grid gap-3 sm:grid-cols-3 text-left">
+                        {[
+                          { step: '01', title: 'Aggregasi & Preprocessing', desc: 'Sistem mengumpulkan data dari database seperti lama langganan (Tenure), skor NPS, aktivitas login, dan jumlah tiket bantuan.' },
+                          { step: '02', title: 'Perhitungan Probabilitas', desc: 'Model Machine Learning (Gradient Boosting Classifier) menghitung tingkat probabilitas churn dari pola data histori (0-100%).' },
+                          { step: '03', title: 'Segmentasi & Tindak Lanjut', desc: 'Hasil probabilitas dipetakan menjadi Tingkat Risiko (Tinggi, Sedang, Rendah) dan menghasilkan AI recommendations bagi staf.' }
+                        ].map(s => (
+                          <div key={s.step} className="rounded-lg bg-white border border-slate-200/60 p-3.5 shadow-xs">
+                            <span className="text-[11px] font-bold uppercase text-blue-500">Langkah {s.step}</span>
+                            <h5 className="text-[12px] font-bold text-slate-800 mt-1">{s.title}</h5>
+                            <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{s.desc}</p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </motion.div>
             </>
           )}
+        </motion.div>
+      ) : (
+        /* ══ TAB ASISTEN AI (CHATBOT) ══════════════════════════════════ */
+        <motion.div variants={pageVariants} initial="hidden" animate="visible" className="space-y-6">
+          {/* AI Metrics Grid */}
+          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.4,ease:[0.16,1,0.3,1]}}
+            className="grid grid-cols-2 gap-4 md:grid-cols-4">
+            {[
+              {label:'Total Percakapan', value:'1.284', suffix:' pesan', Icon:MessageSquare, cls:'text-blue-600', bg:'bg-blue-50'},
+              {label:'Umpan Balik Positif', value:'94.2%', suffix:'', Icon:ThumbsUp, cls:'text-emerald-600', bg:'bg-emerald-50'},
+              {label:'Kecepatan Respon', value:'0.45', suffix:' dtk', Icon:Zap, cls:'text-amber-600', bg:'bg-amber-50'},
+              {label:'Akurasi Intensi', value:'96.8%', suffix:'', Icon:Cpu, cls:'text-violet-600', bg:'bg-violet-50'},
+            ].map(m=>(
+              <div key={m.label} className="vs-card p-5 text-left">
+                <div className={`mb-3 flex h-9 w-9 items-center justify-center rounded-xl ${m.bg}`}>
+                  <m.Icon className={`h-4 w-4 ${m.cls}`}/>
+                </div>
+                <div className={`text-2xl font-bold ${m.cls}`}>
+                  {m.value}<span className="text-xs font-semibold text-slate-400">{m.suffix}</span>
+                </div>
+                <div className="mt-1 text-[12px] text-slate-400">{m.label}</div>
+              </div>
+            ))}
+          </motion.div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Chatbot Volume Line Chart */}
+            <motion.div initial={{opacity:0,x:-20}} animate={{opacity:1,x:0}} transition={{duration:0.45,delay:0.1}} className="vs-card p-6 text-left">
+              <h3 className="text-[14px] font-bold text-slate-900 mb-2">Volume Obrolan Harian (7 Hari Terakhir)</h3>
+              <p className="text-[12px] text-slate-400 mb-4">Grafik interaksi pengguna dengan ChurnShield AI Assistant.</p>
+              <div className="h-[220px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[
+                    { label: 'Senin', Volume: 120, Positif: 112 },
+                    { label: 'Selasa', Volume: 145, Positif: 135 },
+                    { label: 'Rabu', Volume: 160, Positif: 151 },
+                    { label: 'Kamis', Volume: 130, Positif: 122 },
+                    { label: 'Jumat', Volume: 175, Positif: 166 },
+                    { label: 'Sabtu', Volume: 45, Positif: 42 },
+                    { label: 'Minggu', Volume: 30, Positif: 28 },
+                  ]} margin={{top:5,right:5,left:-15,bottom:0}}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9"/>
+                    <XAxis dataKey="label" tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                    <YAxis tick={{fontSize:11,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
+                    <Tooltip content={<DkTip suffix=" chat"/>}/>
+                    <Bar dataKey="Volume" fill="#2563EB" radius={[4,4,0,0]} maxBarSize={30}/>
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </motion.div>
+
+            {/* Top intents progress list */}
+            <motion.div initial={{opacity:0,x:20}} animate={{opacity:1,x:0}} transition={{duration:0.45,delay:0.1}} className="vs-card p-6 text-left">
+              <h3 className="text-[14px] font-bold text-slate-900 mb-2">Topik Pertanyaan Terbanyak (NLP)</h3>
+              <p className="text-[12px] text-slate-400 mb-4">Intensi dari pesan pengguna yang berhasil di-parse oleh kecerdasan AI.</p>
+              
+              <div className="space-y-3.5">
+                {[
+                  { name: 'Detail Pelanggan (Customer Profile)', count: 420, pct: 100 },
+                  { name: 'Risiko Tinggi (High Risk)', count: 315, pct: 75 },
+                  { name: 'Pertanyaan Umum / General', count: 244, pct: 58 },
+                  { name: 'Beban Kerja Tim (Staff Workload)', count: 180, pct: 43 },
+                  { name: 'Pelanggan Churn (Actual Churn)', count: 125, pct: 30 }
+                ].map((f, i) => (
+                  <div key={f.name} className="flex items-center gap-3">
+                    <span className="w-5 shrink-0 text-center text-[10px] font-bold tabular-nums text-slate-400">{i+1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className="mb-1 flex items-center justify-between gap-2">
+                        <span className="truncate text-[12px] font-semibold text-slate-700">{f.name}</span>
+                        <span className="shrink-0 font-mono text-[11px] font-bold text-slate-500">{f.count} kali</span>
+                      </div>
+                      <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+                        <div className="h-full rounded-full bg-indigo-500 transition-all duration-700" style={{width:`${f.pct}%`}}/>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+
+          {/* NLP Explanation Section */}
+          <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{duration:0.45,delay:0.2}} className="vs-card p-6 text-left">
+            <div className="flex items-center gap-2 mb-3">
+              <Sparkles className="h-5 w-5 text-blue-600" />
+              <h4 className="text-[14px] font-bold text-slate-900">Bagaimana Sistem NLP Chatbot Bekerja?</h4>
+            </div>
+            <p className="text-[13px] leading-relaxed text-slate-500 mb-4">
+              NLP (Natural Language Processing) pada ChurnShield AI memproses bahasa alami pengguna dengan alur kerja berikut:
+            </p>
+            <div className="grid gap-3 sm:grid-cols-4 text-left">
+              {[
+                { step: '01', title: 'Pemrosesan Teks', desc: 'Menerima masukan teks pengguna dan melakukan tokenisasi serta pembersihan bahasa pengantar.' },
+                { step: '02', title: 'Deteksi Intensi', desc: 'Memetakan kalimat ke perintah spesifik (seperti detail data atau performa tim) secara otomatis.' },
+                { step: '03', title: 'Ekstraksi Entitas', desc: 'Mengekstrak entitas penting dari kalimat seperti ID pelanggan (contoh: C-0001) untuk query database.' },
+                { step: '04', title: 'Formulasi Respon', desc: 'Menghasilkan jawaban berbasis data dalam format Markdown dan menyusun rekomendasi pertanyaan lanjutan.' }
+              ].map(s=>(
+                <div key={s.step} className="rounded-lg bg-slate-50 border border-slate-100 p-3.5">
+                  <span className="text-[11px] font-bold uppercase text-blue-500">Langkah {s.step}</span>
+                  <h5 className="text-[12px] font-bold text-slate-800 mt-1">{s.title}</h5>
+                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
         </motion.div>
       )}
 
